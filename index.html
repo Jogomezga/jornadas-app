@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Jornadas App</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --primary: #4338CA;
+    --primary-light: #EEF2FF;
+    --primary-dark: #3730A3;
+    --success: #059669;
+    --success-light: #D1FAE5;
+    --warning: #D97706;
+    --warning-light: #FEF3C7;
+    --danger: #DC2626;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF;
+    --gray-500: #6B7280;
+    --gray-600: #4B5563;
+    --gray-700: #374151;
+    --gray-900: #111827;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--gray-100); color: var(--gray-900); }
+
+  /* APP SHELL */
+  .app { display: flex; flex-direction: column; height: 100vh; max-width: 480px; margin: 0 auto; background: white; position: relative; box-shadow: var(--shadow-lg); }
+
+  /* HEADER */
+  .header { background: var(--primary); color: white; padding: 16px; padding-top: max(16px, env(safe-area-inset-top)); flex-shrink: 0; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .header-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+  .header-date { font-size: 13px; opacity: 0.8; }
+  .date-nav { display: flex; align-items: center; gap: 8px; }
+  .date-nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 8px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .date-nav-btn:active { background: rgba(255,255,255,0.3); }
+  .date-label { font-size: 15px; font-weight: 600; flex: 1; text-align: center; }
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .stat { background: rgba(255,255,255,0.15); border-radius: var(--radius-sm); padding: 8px 12px; }
+  .stat-val { font-size: 20px; font-weight: 700; }
+  .stat-lbl { font-size: 11px; opacity: 0.8; margin-top: 1px; }
+
+  /* TABS */
+  .tabs { display: flex; border-bottom: 1px solid var(--gray-200); flex-shrink: 0; background: white; }
+  .tab { flex: 1; padding: 10px 4px; text-align: center; font-size: 12px; color: var(--gray-500); cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; transition: color 0.15s; }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .tab-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+
+  /* CONTENT */
+  .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .view { display: none; padding: 12px; }
+  .view.active { display: block; }
+
+  /* CARDS */
+  .collab-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+  .collab-card:active { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+  .collab-card.assigned { border-left: 3px solid var(--success); }
+  .collab-card.pending { border-left: 3px solid var(--gray-300); }
+  .card-top { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .card-info { flex: 1; min-width: 0; }
+  .card-name { font-size: 14px; font-weight: 600; color: var(--gray-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-cc { font-size: 12px; color: var(--gray-500); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 20px; flex-shrink: 0; }
+  .badge-ok { background: var(--success-light); color: var(--success); }
+  .badge-pending { background: var(--warning-light); color: var(--warning); }
+  .shift-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; background: var(--primary-light); color: var(--primary); padding: 3px 8px; border-radius: 20px; margin-top: 6px; font-weight: 500; }
+
+  /* MODAL */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: flex-end; justify-content: center; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: white; border-radius: 20px 20px 0 0; padding: 20px; padding-bottom: max(20px, env(safe-area-inset-bottom)); width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+  .modal-handle { width: 40px; height: 4px; background: var(--gray-300); border-radius: 2px; margin: 0 auto 16px; }
+  .modal-title { font-size: 17px; font-weight: 700; color: var(--gray-900); }
+  .modal-sub { font-size: 13px; color: var(--gray-500); margin-top: 2px; margin-bottom: 16px; }
+  .section-title { font-size: 11px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; margin: 14px 0 8px; }
+  .shift-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .shift-opt { border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); padding: 10px 6px; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .shift-opt:active { border-color: var(--primary); }
+  .shift-opt.sel { border-color: var(--primary); background: var(--primary-light); }
+  .shift-opt-name { font-size: 13px; font-weight: 600; color: var(--gray-700); }
+  .shift-opt.sel .shift-opt-name { color: var(--primary); }
+  .shift-opt-time { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+  .search-input { width: 100%; padding: 10px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; color: var(--gray-900); background: var(--gray-50); outline: none; margin-bottom: 8px; }
+  .search-input:focus { border-color: var(--primary); background: white; }
+  .cc-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); }
+  .cc-item { padding: 10px 12px; font-size: 13px; color: var(--gray-700); cursor: pointer; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; gap: 8px; }
+  .cc-item:last-child { border-bottom: none; }
+  .cc-item:active { background: var(--gray-50); }
+  .cc-item.sel { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+  .cc-code { font-size: 11px; color: var(--gray-400); font-family: monospace; min-width: 30px; }
+  .cc-item.sel .cc-code { color: var(--primary); opacity: 0.7; }
+  .split-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--gray-100); margin-top: 8px; }
+  .split-label { font-size: 14px; font-weight: 500; color: var(--gray-700); }
+  .split-sub { font-size: 12px; color: var(--gray-400); margin-top: 1px; }
+  .toggle { position: relative; width: 44px; height: 24px; background: var(--gray-300); border-radius: 12px; cursor: pointer; transition: background 0.2s; flex-shrink: 0; border: none; }
+  .toggle.on { background: var(--primary); }
+  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  .toggle.on::after { transform: translateX(20px); }
+  .btn { width: 100%; padding: 14px; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 14px; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:active { background: var(--primary-dark); }
+  .btn-danger { background: #FEE2E2; color: var(--danger); margin-top: 8px; }
+
+  /* REPORT */
+  .report-card { background: var(--gray-50); border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
+  .report-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--gray-200); }
+  .report-row:last-child { border-bottom: none; }
+  .report-cc { font-size: 13px; color: var(--gray-700); flex: 1; min-width: 0; margin-right: 8px; }
+  .report-code { font-size: 11px; color: var(--gray-400); font-family: monospace; }
+  .report-hrs { font-size: 14px; font-weight: 700; color: var(--primary); flex-shrink: 0; }
+  .progress { height: 3px; background: var(--gray-200); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--primary); border-radius: 2px; }
+  .empty { text-align: center; padding: 48px 24px; color: var(--gray-400); }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; line-height: 1.5; }
+
+  /* LOADING */
+  .loading { display: flex; align-items: center; justify-content: center; height: 200px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* TOAST */
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--gray-900); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 200; white-space: nowrap; max-width: 90vw; text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* COLORS FOR AVATARS */
+  .av0{background:#EEF2FF;color:#4338CA} .av1{background:#D1FAE5;color:#065F46} .av2{background:#FEF3C7;color:#92400E}
+  .av3{background:#FCE7F3;color:#9D174D} .av4{background:#E0F2FE;color:#0C4A6E} .av5{background:#F0FDF4;color:#14532D}
+
+  /* MONTH SELECTOR */
+  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .month-btn { background: var(--gray-100); border: none; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; color: var(--gray-700); font-weight: 500; }
+  .month-label { font-size: 15px; font-weight: 700; color: var(--gray-900); }
+  .export-btn { width: 100%; padding: 12px; border: 1.5px solid var(--primary); border-radius: var(--radius); font-size: 14px; font-weight: 600; color: var(--primary); background: white; cursor: pointer; margin-top: 12px; }
+  .export-btn:active { background: var(--primary-light); }
+
+  @media (min-width: 480px) {
+    body { background: #E5E7EB; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="header-title">📋 Jornadas</div>
+        <div class="header-date" id="header-date"></div>
+      </div>
+    </div>
+    <div class="date-nav">
+      <button class="date-nav-btn" onclick="changeDate(-1)">‹</button>
+      <div class="date-label" id="date-label"></div>
+      <button class="date-nav-btn" onclick="changeDate(1)">›</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat">
+        <div class="stat-val" id="stat-prog">—</div>
+        <div class="stat-lbl">Programados hoy</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-cc">—</div>
+        <div class="stat-lbl">Centros activos</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('prog')"><span class="tab-icon">📅</span>Programar</div>
+    <div class="tab" onclick="switchTab('report')"><span class="tab-icon">📊</span>Reporte</div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+    <!-- PROGRAMAR -->
+    <div class="view active" id="view-prog">
+      <div id="collab-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- REPORTE -->
+    <div class="view" id="view-report">
+      <div class="month-nav">
+        <button class="month-btn" onclick="changeMonth(-1)">‹ Anterior</button>
+        <div class="month-label" id="month-label"></div>
+        <button class="month-btn" onclick="changeMonth(1)">Siguiente ›</button>
+      </div>
+      <div id="report-content"><div class="loading"><div class="spinner"></div></div></div>
+      <button class="export-btn" onclick="exportCSV()">⬇ Exportar a Excel / CSV</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="modal" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-name"></div>
+    <div class="modal-sub" id="modal-date-sub"></div>
+
+    <div class="section-title">Turno</div>
+    <div class="shift-grid" id="shift-grid"></div>
+
+    <div class="section-title">Centro de costo</div>
+    <input class="search-input" id="cc-search" placeholder="🔍 Buscar por código o nombre..." oninput="filterCC(1)">
+    <div class="cc-list" id="cc-list-1"></div>
+
+    <div class="split-row">
+      <div>
+        <div class="split-label">Jornada partida</div>
+        <div class="split-sub">Asignar segundo centro de costo</div>
+      </div>
+      <button class="toggle" id="split-toggle" onclick="toggleSplit()" aria-label="Activar jornada partida"></button>
+    </div>
+
+    <div id="cc2-section" style="display:none">
+      <div class="section-title">Segundo centro de costo</div>
+      <input class="search-input" id="cc-search2" placeholder="🔍 Buscar segundo centro..." oninput="filterCC(2)">
+      <div class="cc-list" id="cc-list-2"></div>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveAssignment()">✓ Guardar programación</button>
+    <button class="btn btn-danger" id="btn-clear" onclick="clearAssignment()" style="display:none">✕ Quitar asignación</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG SUPABASE ───────────────────────────────────────────────
+const SUPABASE_URL = 'https://nlmdzeguypchoqusdyzx.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sbWR6ZWd1eXBjaG91cXNkeXp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4OTMwODksImV4cCI6MjA5NzQ2OTA4OX0.vN9nOwldbRO_me2LlRR95rvD5IV10C7EOPpT3GC6zxM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── ESTADO ────────────────────────────────────────────────────────
+let colaboradores = [], centros = [], turnos = [];
+let programacion = {}; // { colaborador_id: { turno_id, centro_costo_id, centro_costo_id2, id } }
+let currentDate = new Date();
+let currentMonth = new Date();
+let currentColabIdx = null;
+let splitOn = false;
+let selShift = null, selCC = null, selCC2 = null;
+const AVATAR_COLORS = ['av0','av1','av2','av3','av4','av5'];
+
+const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS_ES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const DAYS_SHORT = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+// ─── INIT ──────────────────────────────────────────────────────────
+async function init() {
+  updateDateLabels();
+  const [c, cc, t] = await Promise.all([
+    sb.from('colaboradores').select('*').eq('activo', true).order('nombre'),
+    sb.from('centros_costo').select('*').eq('activo', true).order('codigo'),
+    sb.from('turnos').select('*').order('id')
+  ]);
+  colaboradores = c.data || [];
+  centros = cc.data || [];
+  turnos = t.data || [];
+  await loadProgramacion();
+}
+
+function dateKey(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+function updateDateLabels() {
+  const d = currentDate;
+  document.getElementById('date-label').textContent = DAYS_SHORT[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS_ES[d.getMonth()].slice(0,3);
+  document.getElementById('header-date').textContent = DAYS_ES[d.getDay()] + ', ' + d.getDate() + ' de ' + MONTHS_ES[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+async function loadProgramacion() {
+  document.getElementById('collab-list').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  const key = dateKey(currentDate);
+  const { data } = await sb.from('programacion').select('*').eq('fecha', key);
+  programacion = {};
+  (data || []).forEach(r => { programacion[r.colaborador_id] = r; });
+  renderCollabs();
+}
+
+function renderCollabs() {
+  const prog = Object.keys(programacion).length;
+  const ccs = new Set(Object.values(programacion).flatMap(r => [r.centro_costo_id, r.centro_costo_id2].filter(Boolean)));
+  document.getElementById('stat-prog').textContent = prog + ' / ' + colaboradores.length;
+  document.getElementById('stat-cc').textContent = ccs.size;
+
+  const html = colaboradores.map((c, i) => {
+    const asn = programacion[c.id];
+    const cc = asn ? centros.find(x => x.id === asn.centro_costo_id) : null;
+    const cc2 = asn && asn.centro_costo_id2 ? centros.find(x => x.id === asn.centro_costo_id2) : null;
+    const turno = asn ? turnos.find(x => x.id === asn.turno_id) : null;
+    const av = c.nombre.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    const avc = AVATAR_COLORS[i % 6];
+    const assigned = !!asn;
+    const ccLabel = cc ? cc.codigo + ' · ' + cc.nombre.slice(0,28) : 'Sin asignar';
+    const badge = assigned
+      ? '<span class="badge badge-ok">✓ Listo</span>'
+      : '<span class="badge badge-pending">Pendiente</span>';
+    const shiftTag = turno ? `<div class="shift-tag">⏰ ${turno.nombre} ${turno.hora_entrada.slice(0,5)}–${turno.hora_salida.slice(0,5)}${cc2?' · '+cc2.codigo:''}</div>` : '';
+    return `<div class="collab-card ${assigned?'assigned':'pending'}" onclick="openModal(${i})">
+      <div class="card-top">
+        <div class="avatar ${avc}">${av}</div>
+        <div class="card-info">
+          <div class="card-name">${c.nombre}</div>
+          <div class="card-cc">${ccLabel}</div>
+        </div>
+        ${badge}
+      </div>
+      ${shiftTag}
+    </div>`;
+  }).join('');
+  document.getElementById('collab-list').innerHTML = html;
+}
+
+// ─── NAVEGACIÓN ────────────────────────────────────────────────────
+function changeDate(d) {
+  currentDate.setDate(currentDate.getDate() + d);
+  updateDateLabels();
+  loadProgramacion();
+}
+
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el, i) => el.classList.toggle('active', ['prog','report'][i] === t));
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + t).classList.add('active');
+  if (t === 'report') loadReport();
+}
+
+// ─── MODAL ─────────────────────────────────────────────────────────
+function openModal(idx) {
+  currentColabIdx = idx;
+  const c = colaboradores[idx];
+  const asn = programacion[c.id];
+  selShift = asn ? asn.turno_id : (turnos[2]?.id || null);
+  selCC = asn ? asn.centro_costo_id : null;
+  selCC2 = asn ? asn.centro_costo_id2 : null;
+  splitOn = !!(asn && asn.centro_costo_id2);
+
+  document.getElementById('modal-name').textContent = c.nombre;
+  document.getElementById('modal-date-sub').textContent = dateKey(currentDate);
+  document.getElementById('cc-search').value = '';
+  document.getElementById('cc-search2').value = '';
+  document.getElementById('cc2-section').style.display = splitOn ? 'block' : 'none';
+  document.getElementById('btn-clear').style.display = asn ? 'block' : 'none';
+  const tog = document.getElementById('split-toggle');
+  tog.classList.toggle('on', splitOn);
+
+  renderShifts();
+  renderCCList(1);
+  renderCCList(2);
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function renderShifts() {
+  document.getElementById('shift-grid').innerHTML = turnos.map(t => `
+    <div class="shift-opt ${t.id === selShift ? 'sel' : ''}" onclick="selShiftFn(${t.id})">
+      <div class="shift-opt-name">${t.nombre}</div>
+      <div class="shift-opt-time">${t.hora_entrada.slice(0,5)}–${t.hora_salida.slice(0,5)}</div>
+    </div>`).join('');
+}
+function selShiftFn(id) { selShift = id; renderShifts(); }
+
+function filterCC(n) {
+  renderCCList(n);
+}
+
+function renderCCList(n) {
+  const q = (document.getElementById('cc-search' + (n===1?'':'2')).value || '').toLowerCase();
+  const exclude = n === 2 ? selCC : null;
+  const filtered = centros.filter(c =>
+    (!exclude || c.id !== exclude) &&
+    (c.codigo.toLowerCase().includes(q) || c.nombre.toLowerCase().includes(q))
+  ).slice(0, 60);
+  const selId = n === 1 ? selCC : selCC2;
+  document.getElementById('cc-list-' + n).innerHTML = filtered.map(c => `
+    <div class="cc-item ${c.id === selId ? 'sel' : ''}" onclick="selCCFn(${n}, ${c.id})">
+      <span class="cc-code">${c.codigo}</span>
+      <span>${c.nombre}</span>
+    </div>`).join('') || '<div style="padding:12px;text-align:center;font-size:13px;color:#9CA3AF">Sin resultados</div>';
+}
+
+function selCCFn(n, id) {
+  if (n === 1) { selCC = id; renderCCList(1); renderCCList(2); }
+  else { selCC2 = id; renderCCList(2); }
+}
+
+function toggleSplit() {
+  splitOn = !splitOn;
+  document.getElementById('split-toggle').classList.toggle('on', splitOn);
+  document.getElementById('cc2-section').style.display = splitOn ? 'block' : 'none';
+  if (!splitOn) { selCC2 = null; }
+}
+
+async function saveAssignment() {
+  if (!selShift || !selCC) { showToast('Selecciona turno y centro de costo'); return; }
+  const c = colaboradores[currentColabIdx];
+  const key = dateKey(currentDate);
+  const payload = {
+    fecha: key,
+    colaborador_id: c.id,
+    turno_id: selShift,
+    centro_costo_id: selCC,
+    centro_costo_id2: splitOn ? selCC2 : null
+  };
+  const existing = programacion[c.id];
+  let err;
+  if (existing) {
+    ({ error: err } = await sb.from('programacion').update(payload).eq('id', existing.id));
+  } else {
+    ({ error: err } = await sb.from('programacion').insert(payload));
+  }
+  if (err) { showToast('Error al guardar: ' + err.message); return; }
+  closeModal();
+  showToast('✓ ' + c.nombre.split(' ')[0] + ' programado');
+  await loadProgramacion();
+}
+
+async function clearAssignment() {
+  const c = colaboradores[currentColabIdx];
+  const existing = programacion[c.id];
+  if (!existing) return;
+  const { error: err } = await sb.from('programacion').delete().eq('id', existing.id);
+  if (err) { showToast('Error: ' + err.message); return; }
+  closeModal();
+  showToast('Asignación eliminada');
+  await loadProgramacion();
+}
+
+// ─── REPORTE ────────────────────────────────────────────────────────
+async function loadReport() {
+  document.getElementById('report-content').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  document.getElementById('month-label').textContent = MONTHS_ES[currentMonth.getMonth()] + ' ' + currentMonth.getFullYear();
+  const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
+  const from = new Date(y, m, 1).toISOString().slice(0,10);
+  const to = new Date(y, m+1, 0).toISOString().slice(0,10);
+  const { data } = await sb.from('programacion').select('*, turnos(*), centros_costo:centro_costo_id(codigo,nombre), centros_costo2:centro_costo_id2(codigo,nombre)').gte('fecha', from).lte('fecha', to);
+  if (!data || !data.length) {
+    document.getElementById('report-content').innerHTML = '<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">No hay programaciones en este mes.</div></div>';
+    return;
+  }
+  const hrsCC = {};
+  data.forEach(r => {
+    const hrs = calcHrs(r.turnos);
+    const cc = r.centros_costo;
+    if (cc) {
+      const k = cc.codigo + '|' + cc.nombre;
+      hrsCC[k] = (hrsCC[k] || 0) + (r.centros_costo2 ? hrs * 0.6 : hrs);
+    }
+    const cc2 = r.centros_costo2;
+    if (cc2) {
+      const k2 = cc2.codigo + '|' + cc2.nombre;
+      hrsCC[k2] = (hrsCC[k2] || 0) + hrs * 0.4;
+    }
+  });
+  const entries = Object.entries(hrsCC).sort((a,b) => b[1]-a[1]);
+  const max = entries[0][1];
+  document.getElementById('report-content').innerHTML = `
+    <div class="report-card">
+      <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:4px">Horas por centro de costo</div>
+      <div style="font-size:12px;color:#9CA3AF;margin-bottom:12px">${data.length} registros · ${MONTHS_ES[currentMonth.getMonth()]} ${currentMonth.getFullYear()}</div>
+      ${entries.map(([k, hrs]) => {
+        const [cod, nom] = k.split('|');
+        return `<div class="report-row">
+          <div class="report-cc">
+            <div class="report-code">${cod}</div>
+            <div>${nom.slice(0,32)}</div>
+            <div class="progress"><div class="progress-fill" style="width:${Math.round(hrs/max*100)}%"></div></div>
+          </div>
+          <div class="report-hrs">${Math.round(hrs)}h</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function calcHrs(turno) {
+  if (!turno) return 8;
+  const [h1, m1] = turno.hora_entrada.split(':').map(Number);
+  const [h2, m2] = turno.hora_salida.split(':').map(Number);
+  return (h2*60+m2 - h1*60-m1) / 60;
+}
+
+function changeMonth(d) {
+  currentMonth.setMonth(currentMonth.getMonth() + d);
+  loadReport();
+}
+
+async function exportCSV() {
+  showToast('Generando CSV...');
+  const y = currentMonth.getFullYear(), m = currentMonth.getMonth();
+  const from = new Date(y, m, 1).toISOString().slice(0,10);
+  const to = new Date(y, m+1, 0).toISOString().slice(0,10);
+  const { data } = await sb.from('programacion')
+    .select('fecha, colaboradores(nombre), turnos(nombre,hora_entrada,hora_salida), centros_costo:centro_costo_id(codigo,nombre), centros_costo2:centro_costo_id2(codigo,nombre)')
+    .gte('fecha', from).lte('fecha', to).order('fecha');
+  if (!data || !data.length) { showToast('Sin datos para exportar'); return; }
+  const rows = [['Fecha','Colaborador','Turno','Entrada','Salida','CC Principal (Cod)','CC Principal (Nombre)','CC Secundario (Cod)','CC Secundario (Nombre)']];
+  data.forEach(r => {
+    rows.push([
+      r.fecha,
+      r.colaboradores?.nombre || '',
+      r.turnos?.nombre || '',
+      r.turnos?.hora_entrada?.slice(0,5) || '',
+      r.turnos?.hora_salida?.slice(0,5) || '',
+      r.centros_costo?.codigo || '',
+      r.centros_costo?.nombre || '',
+      r.centros_costo2?.codigo || '',
+      r.centros_costo2?.nombre || ''
+    ]);
+  });
+  const csv = rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `jornadas_${from}_${to}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  showToast('✓ CSV descargado');
+}
+
+// ─── TOAST ─────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+init();
+</script>
+</body>
+</html>
