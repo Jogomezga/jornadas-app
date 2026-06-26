@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Jornadas App</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root {
     --primary: #4338CA; --primary-light: #EEF2FF; --primary-dark: #3730A3;
@@ -89,7 +90,10 @@
   .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .month-btn { background: var(--gray-100); border: none; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; color: var(--gray-700); font-weight: 500; }
   .month-label { font-size: 15px; font-weight: 700; }
-  .export-btn { width: 100%; padding: 12px; border: 1.5px solid var(--primary); border-radius: var(--radius); font-size: 14px; font-weight: 600; color: var(--primary); background: white; cursor: pointer; margin-top: 12px; }
+  .export-btn { width: 100%; padding: 12px; border: 1.5px solid var(--primary); border-radius: var(--radius); font-size: 14px; font-weight: 600; color: var(--primary); background: white; cursor: pointer; margin-top: 8px; }
+  .export-btn:active { background: var(--primary-light); }
+  .pdf-btn { width: 100%; padding: 12px; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; color: white; background: #059669; cursor: pointer; margin-top: 8px; }
+  .pdf-btn:active { background: #047857; }
   .report-card { background: #F9FAFB; border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
   .report-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--gray-200); }
   .report-row:last-child { border-bottom: none; }
@@ -99,6 +103,8 @@
   .progress { height: 3px; background: var(--gray-200); border-radius: 2px; margin-top: 4px; overflow: hidden; }
   .progress-fill { height: 100%; background: var(--primary); border-radius: 2px; }
   .empty { text-align: center; padding: 48px 24px; color: var(--gray-400); font-size: 14px; }
+  .share-btn { width: 100%; padding: 12px; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; color: white; background: #25D366; cursor: pointer; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .share-btn:active { background: #1da851; }
   .av0{background:#EEF2FF;color:#4338CA} .av1{background:#D1FAE5;color:#065F46} .av2{background:#FEF3C7;color:#92400E} .av3{background:#FCE7F3;color:#9D174D} .av4{background:#E0F2FE;color:#0C4A6E} .av5{background:#F0FDF4;color:#14532D}
 </style>
 </head>
@@ -131,8 +137,9 @@
         <div class="month-label" id="month-label"></div>
         <button class="month-btn" onclick="changeMonth(1)">Siguiente ›</button>
       </div>
-      <div id="report-content"><div class="loading"><div class="spinner"></div></div></div>
-      <button class="export-btn" onclick="exportCSV()">⬇ Exportar a Excel / CSV</button>
+      <button class="pdf-btn" onclick="exportPDFDia()">📄 PDF programación del día</button>
+      <button class="export-btn" onclick="exportCSV()">⬇ Exportar horas a Excel / CSV</button>
+      <div id="report-content" style="margin-top:12px"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 </div>
@@ -165,7 +172,6 @@
 <script>
 const SUPABASE_URL = 'https://nlmdzeguypchouqsdyzx.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sbWR6ZWd1eXBjaG91cXNkeXp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4OTMwODksImV4cCI6MjA5NzQ2OTA4OX0.vN9nOwldbRO_me2LlRR95rvD5IV10C7EOPpT3GC6zxM';
-
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let colaboradores=[], centros=[], turnos=[], programacion={};
@@ -179,7 +185,7 @@ const DAYS_S=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 async function init(){
   updateDateLabels();
   try{
-    const [{data:c,error:e1},{data:cc,error:e2},{data:t,error:e3}] = await Promise.all([
+    const [{data:c,error:e1},{data:cc,error:e2},{data:t,error:e3}]=await Promise.all([
       sb.from('colaboradores').select('id,nombre').eq('activo',true).order('nombre'),
       sb.from('centros_costo').select('id,codigo,nombre').eq('activo',true).order('codigo'),
       sb.from('turnos').select('*').order('id')
@@ -188,16 +194,16 @@ async function init(){
     if(e2) throw new Error('centros_costo: '+e2.message);
     if(e3) throw new Error('turnos: '+e3.message);
     colaboradores=c||[]; centros=cc||[]; turnos=t||[];
-    if(!colaboradores.length){ showError('No se encontraron colaboradores en la base de datos.'); return; }
+    if(!colaboradores.length){showError('No se encontraron colaboradores.');return;}
     await loadProgramacion();
-  }catch(err){ showError(err.message); }
+  }catch(err){showError(err.message);}
 }
 
 function showError(msg){
   document.getElementById('collab-list').innerHTML=`<div class="error-box"><div class="error-title">⚠️ Error</div><div class="error-msg">${msg}</div></div>`;
 }
 
-function dateKey(d){ return d.toISOString().slice(0,10); }
+function dateKey(d){return d.toISOString().slice(0,10);}
 
 function updateDateLabels(){
   const d=currentDate;
@@ -208,10 +214,10 @@ function updateDateLabels(){
 async function loadProgramacion(){
   document.getElementById('collab-list').innerHTML='<div class="loading"><div class="spinner"></div><div style="font-size:13px;color:#6B7280">Cargando...</div></div>';
   const key=dateKey(currentDate);
-  const {data,error}=await sb.from('programacion').select('*').eq('fecha',key);
-  if(error){ showError('programacion: '+error.message); return; }
+  const{data,error}=await sb.from('programacion').select('*').eq('fecha',key);
+  if(error){showError('programacion: '+error.message);return;}
   programacion={};
-  (data||[]).forEach(r=>{ programacion[r.colaborador_id]=r; });
+  (data||[]).forEach(r=>{programacion[r.colaborador_id]=r;});
   renderCollabs();
 }
 
@@ -238,7 +244,7 @@ function renderCollabs(){
   }).join('');
 }
 
-function changeDate(d){ currentDate.setDate(currentDate.getDate()+d); updateDateLabels(); loadProgramacion(); }
+function changeDate(d){currentDate.setDate(currentDate.getDate()+d);updateDateLabels();loadProgramacion();}
 
 function switchTab(t){
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['prog','report'][i]===t));
@@ -262,12 +268,12 @@ function openModal(idx){
   document.getElementById('cc2-section').style.display=splitOn?'block':'none';
   document.getElementById('btn-clear').style.display=asn?'block':'none';
   document.getElementById('split-toggle').classList.toggle('on',splitOn);
-  renderShifts(); renderCCList(1); renderCCList(2);
+  renderShifts();renderCCList(1);renderCCList(2);
   document.getElementById('modal').classList.add('open');
 }
 
-function closeModalOutside(e){ if(e.target===document.getElementById('modal')) closeModal(); }
-function closeModal(){ document.getElementById('modal').classList.remove('open'); }
+function closeModalOutside(e){if(e.target===document.getElementById('modal'))closeModal();}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
 
 function renderShifts(){
   document.getElementById('shift-grid').innerHTML=turnos.map(t=>`
@@ -276,7 +282,7 @@ function renderShifts(){
       <div class="shift-opt-time">${t.hora_entrada.slice(0,5)}–${t.hora_salida.slice(0,5)}</div>
     </div>`).join('');
 }
-function selShiftFn(id){ selShift=id; renderShifts(); }
+function selShiftFn(id){selShift=id;renderShifts();}
 
 function renderCCList(n){
   const q=(document.getElementById(n===1?'cc-search':'cc-search2').value||'').toLowerCase();
@@ -298,7 +304,7 @@ function toggleSplit(){
   splitOn=!splitOn;
   document.getElementById('split-toggle').classList.toggle('on',splitOn);
   document.getElementById('cc2-section').style.display=splitOn?'block':'none';
-  if(!splitOn) selCC2=null;
+  if(!splitOn)selCC2=null;
 }
 
 async function saveAssignment(){
@@ -307,31 +313,112 @@ async function saveAssignment(){
   const key=dateKey(currentDate);
   const payload={fecha:key,colaborador_id:c.id,turno_id:selShift,centro_costo_id:selCC,centro_costo_id2:splitOn?selCC2:null};
   const existing=programacion[c.id];
-  const {error}=existing
-    ? await sb.from('programacion').update(payload).eq('id',existing.id)
-    : await sb.from('programacion').insert(payload);
+  const{error}=existing
+    ?await sb.from('programacion').update(payload).eq('id',existing.id)
+    :await sb.from('programacion').insert(payload);
   if(error){showToast('Error: '+error.message);return;}
-  closeModal(); showToast('✓ '+c.nombre.split(' ')[0]+' programado');
+  closeModal();showToast('✓ '+c.nombre.split(' ')[0]+' programado');
   await loadProgramacion();
 }
 
 async function clearAssignment(){
   const c=colaboradores[currentColabIdx];
   const existing=programacion[c.id];
-  if(!existing) return;
-  const {error}=await sb.from('programacion').delete().eq('id',existing.id);
+  if(!existing)return;
+  const{error}=await sb.from('programacion').delete().eq('id',existing.id);
   if(error){showToast('Error: '+error.message);return;}
-  closeModal(); showToast('Asignación eliminada');
+  closeModal();showToast('Asignación eliminada');
   await loadProgramacion();
 }
 
+// ─── PDF DEL DÍA ────────────────────────────────────────────────────
+async function exportPDFDia(){
+  showToast('Generando PDF...');
+  const key=dateKey(currentDate);
+  const{data}=await sb.from('programacion').select('colaborador_id,turno_id,centro_costo_id,centro_costo_id2').eq('fecha',key);
+  if(!data||!data.length){showToast('No hay programación para este día');return;}
+
+  // Agrupar por centro de costo
+  const grupos={};
+  data.forEach(r=>{
+    const colab=colaboradores.find(c=>c.id===r.colaborador_id);
+    const turno=turnos.find(t=>t.id===r.turno_id);
+    const cc=centros.find(c=>c.id===r.centro_costo_id);
+    const cc2=r.centro_costo_id2?centros.find(c=>c.id===r.centro_costo_id2):null;
+    const horario=turno?turno.hora_entrada.slice(0,5)+' – '+turno.hora_salida.slice(0,5):'';
+    if(cc){
+      const k=cc.codigo+'|'+cc.nombre;
+      if(!grupos[k])grupos[k]=[];
+      grupos[k].push({nombre:colab?.nombre||'',horario,parcial:!!cc2,cc2:cc2?.nombre||''});
+    }
+    if(cc2){
+      const k2=cc2.codigo+'|'+cc2.nombre;
+      if(!grupos[k2])grupos[k2]=[];
+      grupos[k2].push({nombre:colab?.nombre||'',horario:'(jornada partida)',parcial:true});
+    }
+  });
+
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210, margin=15;
+  let y=margin;
+
+  // Encabezado
+  doc.setFillColor(67,56,202);
+  doc.rect(0,0,W,28,'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(16);doc.setFont('helvetica','bold');
+  doc.text('Programacion de Jornadas',margin,12);
+  doc.setFontSize(11);doc.setFont('helvetica','normal');
+  const fechaLarga=DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()]+' '+currentDate.getFullYear();
+  doc.text(fechaLarga,margin,21);
+  doc.setTextColor(0,0,0);
+  y=36;
+
+  // Proyectos
+  const entries=Object.entries(grupos).sort((a,b)=>a[0].localeCompare(b[0]));
+  entries.forEach(([k,miembros])=>{
+    const[cod,nom]=k.split('|');
+    if(y>260){doc.addPage();y=margin;}
+
+    // Cabecera del proyecto
+    doc.setFillColor(238,242,255);
+    doc.rect(margin,y,W-margin*2,8,'F');
+    doc.setFontSize(10);doc.setFont('helvetica','bold');
+    doc.setTextColor(67,56,202);
+    doc.text(cod+' · '+nom,margin+2,y+5.5);
+    doc.setTextColor(0,0,0);
+    y+=10;
+
+    // Colaboradores
+    miembros.forEach(m=>{
+      if(y>270){doc.addPage();y=margin;}
+      doc.setFontSize(9.5);doc.setFont('helvetica','normal');
+      doc.text('• '+m.nombre,margin+4,y);
+      doc.setTextColor(100,100,100);
+      doc.text(m.horario,W-margin-40,y);
+      doc.setTextColor(0,0,0);
+      y+=6;
+    });
+    y+=4;
+  });
+
+  // Pie de página
+  doc.setFontSize(8);doc.setTextColor(150,150,150);
+  doc.text('Generado por Jornadas App · '+new Date().toLocaleString('es-CO'),margin,290);
+
+  doc.save('programacion_'+key+'.pdf');
+  showToast('✓ PDF descargado');
+}
+
+// ─── REPORTE MENSUAL ─────────────────────────────────────────────────
 async function loadReport(){
   document.getElementById('report-content').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   document.getElementById('month-label').textContent=MONTHS[currentMonth.getMonth()]+' '+currentMonth.getFullYear();
   const y=currentMonth.getFullYear(),m=currentMonth.getMonth();
   const from=new Date(y,m,1).toISOString().slice(0,10);
   const to=new Date(y,m+1,0).toISOString().slice(0,10);
-  const {data}=await sb.from('programacion').select('*,turnos(*),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').gte('fecha',from).lte('fecha',to);
+  const{data}=await sb.from('programacion').select('*,turnos(*),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').gte('fecha',from).lte('fecha',to);
   if(!data||!data.length){document.getElementById('report-content').innerHTML='<div class="empty">No hay programaciones este mes.</div>';return;}
   const hrsCC={};
   data.forEach(r=>{
@@ -352,7 +439,7 @@ async function loadReport(){
 }
 
 function calcHrs(t){
-  if(!t) return 8;
+  if(!t)return 8;
   const[h1,m1]=t.hora_entrada.split(':').map(Number);
   const[h2,m2]=t.hora_salida.split(':').map(Number);
   return(h2*60+m2-h1*60-m1)/60;
@@ -367,7 +454,7 @@ async function exportCSV(){
   const to=new Date(y,m+1,0).toISOString().slice(0,10);
   const{data}=await sb.from('programacion').select('fecha,colaboradores(nombre),turnos(nombre,hora_entrada,hora_salida),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').gte('fecha',from).lte('fecha',to).order('fecha');
   if(!data||!data.length){showToast('Sin datos para exportar');return;}
-  const rows=[['Fecha','Colaborador','Turno','Entrada','Salida','CC1 Código','CC1 Nombre','CC2 Código','CC2 Nombre']];
+  const rows=[['Fecha','Colaborador','Turno','Entrada','Salida','CC1 Codigo','CC1 Nombre','CC2 Codigo','CC2 Nombre']];
   data.forEach(r=>rows.push([r.fecha,r.colaboradores?.nombre||'',r.turnos?.nombre||'',r.turnos?.hora_entrada?.slice(0,5)||'',r.turnos?.hora_salida?.slice(0,5)||'',r.cc1?.codigo||'',r.cc1?.nombre||'',r.cc2?.codigo||'',r.cc2?.nombre||'']));
   const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
