@@ -36,7 +36,6 @@
   .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .view { display: none; padding: 12px; }
   .view.active { display: block; }
-  /* CARDS COLABORADORES */
   .collab-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; cursor: pointer; }
   .collab-card.assigned { border-left: 3px solid var(--success); }
   .collab-card.pending { border-left: 3px solid var(--gray-300); }
@@ -49,7 +48,6 @@
   .badge-ok { background: var(--success-light); color: var(--success); }
   .badge-pending { background: var(--warning-light); color: var(--warning); }
   .shift-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; background: var(--primary-light); color: var(--primary); padding: 3px 8px; border-radius: 20px; margin-top: 6px; font-weight: 500; }
-  /* MODAL */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: flex-end; justify-content: center; }
   .modal-backdrop.open { display: flex; }
   .modal { background: white; border-radius: 20px 20px 0 0; padding: 20px; padding-bottom: max(20px, env(safe-area-inset-bottom)); width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
@@ -63,9 +61,15 @@
   .shift-opt-name { font-size: 13px; font-weight: 600; color: var(--gray-700); }
   .shift-opt.sel .shift-opt-name { color: var(--primary); }
   .shift-opt-time { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+  .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+  .time-group { display: flex; flex-direction: column; gap: 4px; }
+  .time-label { font-size: 11px; color: var(--gray-500); font-weight: 500; }
+  .time-input { padding: 9px 10px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; color: var(--gray-900); background: white; width: 100%; outline: none; }
+  .time-input:focus { border-color: var(--primary); }
+  .time-hint { font-size: 11px; color: var(--primary); background: var(--primary-light); padding: 6px 10px; border-radius: var(--radius-sm); margin-top: 6px; }
   .search-input { width: 100%; padding: 10px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; color: var(--gray-900); background: #F9FAFB; outline: none; margin-bottom: 8px; }
   .search-input:focus { border-color: var(--primary); background: white; }
-  .cc-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); }
+  .cc-list { max-height: 180px; overflow-y: auto; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); }
   .cc-item { padding: 10px 12px; font-size: 13px; color: var(--gray-700); cursor: pointer; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; gap: 8px; }
   .cc-item:last-child { border-bottom: none; }
   .cc-item.sel { background: var(--primary-light); color: var(--primary); font-weight: 600; }
@@ -81,7 +85,6 @@
   .btn { width: 100%; padding: 14px; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 14px; }
   .btn-primary { background: var(--primary); color: white; }
   .btn-danger { background: var(--danger-light); color: var(--danger); margin-top: 8px; }
-  /* REPORTE */
   .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .month-btn { background: var(--gray-100); border: none; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; color: var(--gray-700); font-weight: 500; }
   .month-label { font-size: 15px; font-weight: 700; }
@@ -95,7 +98,6 @@
   .report-hrs { font-size: 14px; font-weight: 700; color: var(--primary); flex-shrink: 0; }
   .progress { height: 3px; background: var(--gray-200); border-radius: 2px; margin-top: 4px; overflow: hidden; }
   .progress-fill { height: 100%; background: var(--primary); border-radius: 2px; }
-  /* PROYECTOS */
   .proj-search { width: 100%; padding: 10px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; background: #F9FAFB; outline: none; margin-bottom: 10px; }
   .proj-search:focus { border-color: var(--primary); background: white; }
   .proj-filter { display: flex; gap: 6px; margin-bottom: 10px; }
@@ -111,13 +113,10 @@
   .proj-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.2s; }
   .proj-toggle.on::after { transform: translateX(20px); }
   .add-btn { width: 100%; padding: 13px; border: 1.5px dashed var(--primary); border-radius: var(--radius); font-size: 14px; font-weight: 600; color: var(--primary); background: white; cursor: pointer; margin-bottom: 12px; }
-  .add-btn:active { background: var(--primary-light); }
-  /* MODAL NUEVO PROYECTO */
   .form-group { margin-bottom: 12px; }
   .form-label { font-size: 12px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; display: block; }
   .form-input { width: 100%; padding: 11px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; color: var(--gray-900); background: white; outline: none; }
   .form-input:focus { border-color: var(--primary); }
-  /* MISC */
   .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; gap: 12px; }
   .spinner { width: 32px; height: 32px; border: 3px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -151,11 +150,9 @@
     <div class="tab" onclick="switchTab('proyectos')"><span class="tab-icon">🏗️</span>Proyectos</div>
   </div>
   <div class="content">
-    <!-- PROGRAMAR -->
     <div class="view active" id="view-prog">
       <div id="collab-list"><div class="loading"><div class="spinner"></div><div style="font-size:13px;color:#6B7280">Cargando...</div></div></div>
     </div>
-    <!-- REPORTE -->
     <div class="view" id="view-report">
       <div class="month-nav">
         <button class="month-btn" onclick="changeMonth(-1)">‹ Anterior</button>
@@ -166,7 +163,6 @@
       <button class="export-btn" onclick="exportCSV()">⬇ Exportar horas a Excel / CSV</button>
       <div id="report-content" style="margin-top:12px"><div class="loading"><div class="spinner"></div></div></div>
     </div>
-    <!-- PROYECTOS -->
     <div class="view" id="view-proyectos">
       <button class="add-btn" onclick="openNuevoProyecto()">＋ Agregar nuevo proyecto</button>
       <input class="proj-search" id="proj-search" placeholder="🔍 Buscar por código o nombre..." oninput="renderProyectos()">
@@ -188,6 +184,23 @@
     <div class="modal-sub" id="modal-date-sub"></div>
     <div class="section-title">Turno</div>
     <div class="shift-grid" id="shift-grid"></div>
+
+    <!-- Horario editable (visible solo para turno Normal) -->
+    <div id="horario-section" style="display:none">
+      <div class="section-title">Horario</div>
+      <div class="time-hint" id="time-hint"></div>
+      <div class="time-row" style="margin-top:8px">
+        <div class="time-group">
+          <span class="time-label">Entrada</span>
+          <input class="time-input" type="time" id="input-entrada" onchange="recalcHint()">
+        </div>
+        <div class="time-group">
+          <span class="time-label">Salida</span>
+          <input class="time-input" type="time" id="input-salida" onchange="recalcHint()">
+        </div>
+      </div>
+    </div>
+
     <div class="section-title">Centro de costo principal</div>
     <input class="search-input" id="cc-search" placeholder="🔍 Buscar por código o nombre..." oninput="renderCCList(1)">
     <div class="cc-list" id="cc-list-1"></div>
@@ -209,7 +222,7 @@
 <div class="modal-backdrop" id="modal-proyecto" onclick="closeProyectoOutside(event)">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title" id="modal-proyecto-title">Nuevo proyecto</div>
+    <div class="modal-title">Nuevo proyecto</div>
     <div class="modal-sub">Completa los datos del centro de costo</div>
     <div class="form-group">
       <label class="form-label">Código</label>
@@ -239,6 +252,19 @@ const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto',
 const DAYS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const DAYS_S=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
+// Horario Normal según día de semana
+// 0=Dom,1=Lun,2=Mar,3=Mié,4=Jue,5=Vie,6=Sáb
+function horarioNormal(fecha){
+  const dia=fecha.getDay();
+  if(dia===5) return {entrada:'07:00', salida:'15:00', label:'Viernes: 7:00 - 15:00'};
+  if(dia===6) return {entrada:'07:00', salida:'11:00', label:'Sábado: 7:00 - 11:00'};
+  if(dia===0) return {entrada:'07:00', salida:'16:00', label:'Domingo: 7:00 - 16:00'};
+  return {entrada:'07:00', salida:'16:00', label:'Lun-Jue: 7:00 - 16:00'};
+}
+
+function getTurnoNormal(){ return turnos.find(t=>t.nombre==='Normal'); }
+function isNormal(id){ const t=getTurnoNormal(); return t&&t.id===id; }
+
 async function init(){
   updateDateLabels();
   try{
@@ -250,10 +276,7 @@ async function init(){
     if(e1) throw new Error('colaboradores: '+e1.message);
     if(e2) throw new Error('centros_costo: '+e2.message);
     if(e3) throw new Error('turnos: '+e3.message);
-    colaboradores=c||[];
-    centrosTodos=cc||[];
-    centros=centrosTodos.filter(x=>x.activo);
-    turnos=t||[];
+    colaboradores=c||[]; centrosTodos=cc||[]; centros=centrosTodos.filter(x=>x.activo); turnos=t||[];
     if(!colaboradores.length){showError('No se encontraron colaboradores.');return;}
     await loadProgramacion();
   }catch(err){showError(err.message);}
@@ -281,6 +304,19 @@ async function loadProgramacion(){
   renderCollabs();
 }
 
+function getHorarioReal(asn){
+  if(!asn) return '';
+  if(asn.hora_entrada_custom && asn.hora_salida_custom)
+    return asn.hora_entrada_custom.slice(0,5)+' – '+asn.hora_salida_custom.slice(0,5);
+  const turno=turnos.find(t=>t.id===asn.turno_id);
+  if(!turno) return '';
+  if(turno.nombre==='Normal'){
+    const h=horarioNormal(currentDate);
+    return h.entrada+' – '+h.salida;
+  }
+  return turno.hora_entrada.slice(0,5)+' – '+turno.hora_salida.slice(0,5);
+}
+
 function renderCollabs(){
   const prog=Object.keys(programacion).length;
   const ccs=new Set(Object.values(programacion).flatMap(r=>[r.centro_costo_id,r.centro_costo_id2].filter(Boolean)));
@@ -294,7 +330,8 @@ function renderCollabs(){
     const av=c.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
     const ccLabel=cc?cc.codigo+' · '+cc.nombre.slice(0,28):'Sin asignar';
     const badge=asn?'<span class="badge badge-ok">✓ Listo</span>':'<span class="badge badge-pending">Pendiente</span>';
-    const shiftTag=turno?`<div class="shift-tag">⏰ ${turno.nombre} ${turno.hora_entrada.slice(0,5)}–${turno.hora_salida.slice(0,5)}${cc2?' · '+cc2.codigo:''}</div>`:'';
+    const horario=getHorarioReal(asn);
+    const shiftTag=turno?`<div class="shift-tag">⏰ ${turno.nombre} ${horario}${cc2?' · '+cc2.codigo:''}</div>`:'';
     return `<div class="collab-card ${asn?'assigned':'pending'}" onclick="openModal(${i})">
       <div class="card-top">
         <div class="avatar ${AVC[i%6]}">${av}</div>
@@ -319,30 +356,82 @@ function openModal(idx){
   currentColabIdx=idx;
   const c=colaboradores[idx];
   const asn=programacion[c.id];
-  selShift=asn?asn.turno_id:(turnos[2]?.id||null);
+  selShift=asn?asn.turno_id:(getTurnoNormal()?.id||turnos[0]?.id||null);
   selCC=asn?asn.centro_costo_id:null;
   selCC2=asn?asn.centro_costo_id2:null;
   splitOn=!!(asn&&asn.centro_costo_id2);
   document.getElementById('modal-name').textContent=c.nombre;
-  document.getElementById('modal-date-sub').textContent=dateKey(currentDate);
+  document.getElementById('modal-date-sub').textContent=DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()];
   document.getElementById('cc-search').value='';
   document.getElementById('cc-search2').value='';
   document.getElementById('cc2-section').style.display=splitOn?'block':'none';
   document.getElementById('btn-clear').style.display=asn?'block':'none';
   document.getElementById('split-toggle').classList.toggle('on',splitOn);
-  renderShifts();renderCCList(1);renderCCList(2);
+
+  // Horario custom si existe
+  if(asn&&asn.hora_entrada_custom){
+    document.getElementById('input-entrada').value=asn.hora_entrada_custom.slice(0,5);
+    document.getElementById('input-salida').value=asn.hora_salida_custom.slice(0,5);
+  } else {
+    const h=horarioNormal(currentDate);
+    document.getElementById('input-entrada').value=h.entrada;
+    document.getElementById('input-salida').value=h.salida;
+  }
+
+  renderShifts();
+  updateHorarioSection();
+  renderCCList(1);renderCCList(2);
   document.getElementById('modal').classList.add('open');
 }
+
+function updateHorarioSection(){
+  const show=isNormal(selShift);
+  document.getElementById('horario-section').style.display=show?'block':'none';
+  if(show) recalcHint();
+}
+
+function recalcHint(){
+  const h=horarioNormal(currentDate);
+  const entrada=document.getElementById('input-entrada').value;
+  const salida=document.getElementById('input-salida').value;
+  const esDefault=entrada===h.entrada&&salida===h.salida;
+  document.getElementById('time-hint').textContent=esDefault
+    ? '⏰ Horario normal: '+h.label
+    : '✏️ Horario modificado para este colaborador';
+}
+
 function closeModalOutside(e){if(e.target===document.getElementById('modal'))closeModal();}
 function closeModal(){document.getElementById('modal').classList.remove('open');}
+
 function renderShifts(){
-  document.getElementById('shift-grid').innerHTML=turnos.map(t=>`
-    <div class="shift-opt ${t.id===selShift?'sel':''}" onclick="selShiftFn(${t.id})">
+  document.getElementById('shift-grid').innerHTML=turnos.map(t=>{
+    let timeLabel='';
+    if(t.nombre==='Normal'){
+      const h=horarioNormal(currentDate);
+      timeLabel=h.entrada+' – '+h.salida;
+    } else {
+      timeLabel=t.hora_entrada.slice(0,5)+' – '+t.hora_salida.slice(0,5);
+    }
+    return `<div class="shift-opt ${t.id===selShift?'sel':''}" onclick="selShiftFn(${t.id})">
       <div class="shift-opt-name">${t.nombre}</div>
-      <div class="shift-opt-time">${t.hora_entrada.slice(0,5)}–${t.hora_salida.slice(0,5)}</div>
-    </div>`).join('');
+      <div class="shift-opt-time">${timeLabel}</div>
+    </div>`;
+  }).join('');
 }
-function selShiftFn(id){selShift=id;renderShifts();}
+
+function selShiftFn(id){
+  selShift=id;
+  renderShifts();
+  updateHorarioSection();
+  // Reset horario al default del día si cambia a Normal
+  if(isNormal(id)){
+    const h=horarioNormal(currentDate);
+    document.getElementById('input-entrada').value=h.entrada;
+    document.getElementById('input-salida').value=h.salida;
+    recalcHint();
+  }
+}
+
 function renderCCList(n){
   const q=(document.getElementById(n===1?'cc-search':'cc-search2').value||'').toLowerCase();
   const excl=n===2?selCC:null;
@@ -363,11 +452,22 @@ function toggleSplit(){
   document.getElementById('cc2-section').style.display=splitOn?'block':'none';
   if(!splitOn)selCC2=null;
 }
+
 async function saveAssignment(){
   if(!selShift||!selCC){showToast('Selecciona turno y centro de costo');return;}
   const c=colaboradores[currentColabIdx];
   const key=dateKey(currentDate);
-  const payload={fecha:key,colaborador_id:c.id,turno_id:selShift,centro_costo_id:selCC,centro_costo_id2:splitOn?selCC2:null};
+  let hora_entrada_custom=null, hora_salida_custom=null;
+  if(isNormal(selShift)){
+    const h=horarioNormal(currentDate);
+    const entrada=document.getElementById('input-entrada').value;
+    const salida=document.getElementById('input-salida').value;
+    if(entrada!==h.entrada||salida!==h.salida){
+      hora_entrada_custom=entrada; hora_salida_custom=salida;
+    }
+  }
+  const payload={fecha:key,colaborador_id:c.id,turno_id:selShift,centro_costo_id:selCC,
+    centro_costo_id2:splitOn?selCC2:null,hora_entrada_custom,hora_salida_custom};
   const existing=programacion[c.id];
   const{error}=existing
     ?await sb.from('programacion').update(payload).eq('id',existing.id)
@@ -376,6 +476,7 @@ async function saveAssignment(){
   closeModal();showToast('✓ '+c.nombre.split(' ')[0]+' programado');
   await loadProgramacion();
 }
+
 async function clearAssignment(){
   const c=colaboradores[currentColabIdx];
   const existing=programacion[c.id];
@@ -386,47 +487,38 @@ async function clearAssignment(){
   await loadProgramacion();
 }
 
-// ─── GESTIÓN DE PROYECTOS ───────────────────────────────────────────
+// ─── GESTIÓN DE PROYECTOS ────────────────────────────────────────────
 function setFilter(f){
   proyFilter=f;
-  ['todos','activos','inactivos'].forEach(x=>{
-    document.getElementById('filter-'+x).classList.toggle('active',x===f);
-  });
+  ['todos','activos','inactivos'].forEach(x=>document.getElementById('filter-'+x).classList.toggle('active',x===f));
   renderProyectos();
 }
-
 function renderProyectos(){
   const q=(document.getElementById('proj-search').value||'').toLowerCase();
-  let lista=centrosTodos.filter(c=>{
+  const lista=centrosTodos.filter(c=>{
     const matchQ=c.codigo.toLowerCase().includes(q)||c.nombre.toLowerCase().includes(q);
     const matchF=proyFilter==='todos'||(proyFilter==='activos'&&c.activo)||(proyFilter==='inactivos'&&!c.activo);
     return matchQ&&matchF;
   });
-  if(!lista.length){
-    document.getElementById('proj-list').innerHTML='<div class="empty">No hay proyectos que coincidan</div>';
-    return;
-  }
+  if(!lista.length){document.getElementById('proj-list').innerHTML='<div class="empty">No hay proyectos que coincidan</div>';return;}
   document.getElementById('proj-list').innerHTML=lista.map(c=>`
     <div class="proj-card ${c.activo?'':'inactive'}">
       <div class="proj-info">
         <div class="proj-code">${c.codigo}</div>
         <div class="proj-name">${c.nombre}</div>
       </div>
-      <button class="proj-toggle ${c.activo?'on':''}" onclick="toggleProyecto(${c.id},${c.activo})" title="${c.activo?'Desactivar':'Activar'}"></button>
+      <button class="proj-toggle ${c.activo?'on':''}" onclick="toggleProyecto(${c.id},${c.activo})"></button>
     </div>`).join('');
 }
-
-async function toggleProyecto(id, activo){
+async function toggleProyecto(id,activo){
   const{error}=await sb.from('centros_costo').update({activo:!activo}).eq('id',id);
   if(error){showToast('Error: '+error.message);return;}
-  // Actualizar local
   const idx=centrosTodos.findIndex(c=>c.id===id);
-  if(idx>=0) centrosTodos[idx].activo=!activo;
+  if(idx>=0)centrosTodos[idx].activo=!activo;
   centros=centrosTodos.filter(x=>x.activo);
   renderProyectos();
   showToast(activo?'Proyecto desactivado':'Proyecto activado');
 }
-
 function openNuevoProyecto(){
   document.getElementById('input-codigo').value='';
   document.getElementById('input-nombre').value='';
@@ -434,7 +526,6 @@ function openNuevoProyecto(){
   setTimeout(()=>document.getElementById('input-codigo').focus(),300);
 }
 function closeProyectoOutside(e){if(e.target===document.getElementById('modal-proyecto'))document.getElementById('modal-proyecto').classList.remove('open');}
-
 async function guardarProyecto(){
   const codigo=document.getElementById('input-codigo').value.trim();
   const nombre=document.getElementById('input-nombre').value.trim().toUpperCase();
@@ -453,7 +544,7 @@ async function guardarProyecto(){
 async function exportPDFDia(){
   showToast('Generando PDF...');
   const key=dateKey(currentDate);
-  const{data}=await sb.from('programacion').select('colaborador_id,turno_id,centro_costo_id,centro_costo_id2').eq('fecha',key);
+  const{data}=await sb.from('programacion').select('*').eq('fecha',key);
   if(!data||!data.length){showToast('No hay programación para este día');return;}
   const grupos={};
   data.forEach(r=>{
@@ -461,7 +552,16 @@ async function exportPDFDia(){
     const turno=turnos.find(t=>t.id===r.turno_id);
     const cc=centrosTodos.find(c=>c.id===r.centro_costo_id);
     const cc2=r.centro_costo_id2?centrosTodos.find(c=>c.id===r.centro_costo_id2):null;
-    const horario=turno?turno.hora_entrada.slice(0,5)+' - '+turno.hora_salida.slice(0,5):'';
+    let entrada,salida;
+    if(r.hora_entrada_custom&&r.hora_salida_custom){
+      entrada=r.hora_entrada_custom.slice(0,5);salida=r.hora_salida_custom.slice(0,5);
+    } else if(turno&&turno.nombre==='Normal'){
+      const h=horarioNormal(currentDate);entrada=h.entrada;salida=h.salida;
+    } else {
+      entrada=turno?turno.hora_entrada.slice(0,5):'';
+      salida=turno?turno.hora_salida.slice(0,5):'';
+    }
+    const horario=entrada+' - '+salida;
     if(cc){
       const k=cc.codigo+'||'+cc.nombre;
       if(!grupos[k])grupos[k]=[];
@@ -475,44 +575,32 @@ async function exportPDFDia(){
   });
   const{jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const W=210,margin=15;
-  let y=margin;
-  doc.setFillColor(67,56,202);
-  doc.rect(0,0,W,28,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFontSize(16);doc.setFont('helvetica','bold');
+  const W=210,margin=15;let y=margin;
+  doc.setFillColor(67,56,202);doc.rect(0,0,W,28,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(16);doc.setFont('helvetica','bold');
   doc.text('Programacion de Jornadas',margin,12);
   doc.setFontSize(11);doc.setFont('helvetica','normal');
-  const fechaLarga=DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()]+' '+currentDate.getFullYear();
-  doc.text(fechaLarga,margin,21);
-  doc.setTextColor(0,0,0);
-  y=36;
+  doc.text(DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()]+' '+currentDate.getFullYear(),margin,21);
+  doc.setTextColor(0,0,0);y=36;
   const entries=Object.entries(grupos).sort((a,b)=>a[0].localeCompare(b[0]));
   entries.forEach(([k,miembros])=>{
     const[cod,nom]=k.split('||');
     if(y>260){doc.addPage();y=margin;}
-    doc.setFillColor(238,242,255);
-    doc.rect(margin,y,W-margin*2,8,'F');
-    doc.setFontSize(10);doc.setFont('helvetica','bold');
-    doc.setTextColor(67,56,202);
-    doc.text(cod+' - '+nom,margin+2,y+5.5);
-    doc.setTextColor(0,0,0);
-    y+=10;
+    doc.setFillColor(238,242,255);doc.rect(margin,y,W-margin*2,8,'F');
+    doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(67,56,202);
+    doc.text(cod+' - '+nom,margin+2,y+5.5);doc.setTextColor(0,0,0);y+=10;
     miembros.forEach(m=>{
       if(y>270){doc.addPage();y=margin;}
       doc.setFontSize(9.5);doc.setFont('helvetica','normal');
       doc.text('  '+m.nombre,margin+2,y);
-      doc.setTextColor(100,100,100);
-      doc.text(m.horario,W-margin-38,y);
-      doc.setTextColor(0,0,0);
-      y+=6;
+      doc.setTextColor(100,100,100);doc.text(m.horario,W-margin-38,y);
+      doc.setTextColor(0,0,0);y+=6;
     });
     y+=4;
   });
   doc.setFontSize(8);doc.setTextColor(150,150,150);
   doc.text('Generado por Jornadas App',margin,290);
-  doc.save('programacion_'+key+'.pdf');
-  showToast('✓ PDF descargado');
+  doc.save('programacion_'+key+'.pdf');showToast('✓ PDF descargado');
 }
 
 // ─── REPORTE MENSUAL ─────────────────────────────────────────────────
@@ -526,7 +614,20 @@ async function loadReport(){
   if(!data||!data.length){document.getElementById('report-content').innerHTML='<div class="empty">No hay programaciones este mes.</div>';return;}
   const hrsCC={};
   data.forEach(r=>{
-    const hrs=calcHrs(r.turnos);
+    let hrs;
+    if(r.hora_entrada_custom&&r.hora_salida_custom){
+      const[h1,m1]=r.hora_entrada_custom.split(':').map(Number);
+      const[h2,m2]=r.hora_salida_custom.split(':').map(Number);
+      hrs=(h2*60+m2-h1*60-m1)/60;
+    } else if(r.turnos&&r.turnos.nombre==='Normal'){
+      const fecha=new Date(r.fecha+'T12:00:00');
+      const h=horarioNormal(fecha);
+      const[h1,m1]=h.entrada.split(':').map(Number);
+      const[h2,m2]=h.salida.split(':').map(Number);
+      hrs=(h2*60+m2-h1*60-m1)/60;
+    } else {
+      hrs=calcHrs(r.turnos);
+    }
     if(r.cc1){const k=r.cc1.codigo+'|'+r.cc1.nombre;hrsCC[k]=(hrsCC[k]||0)+(r.cc2?hrs*0.6:hrs);}
     if(r.cc2){const k2=r.cc2.codigo+'|'+r.cc2.nombre;hrsCC[k2]=(hrsCC[k2]||0)+hrs*0.4;}
   });
@@ -555,10 +656,18 @@ async function exportCSV(){
   const y=currentMonth.getFullYear(),m=currentMonth.getMonth();
   const from=new Date(y,m,1).toISOString().slice(0,10);
   const to=new Date(y,m+1,0).toISOString().slice(0,10);
-  const{data}=await sb.from('programacion').select('fecha,colaboradores(nombre),turnos(nombre,hora_entrada,hora_salida),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').gte('fecha',from).lte('fecha',to).order('fecha');
+  const{data}=await sb.from('programacion').select('fecha,hora_entrada_custom,hora_salida_custom,colaboradores(nombre),turnos(nombre,hora_entrada,hora_salida),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').gte('fecha',from).lte('fecha',to).order('fecha');
   if(!data||!data.length){showToast('Sin datos para exportar');return;}
   const rows=[['Fecha','Colaborador','Turno','Entrada','Salida','CC1 Codigo','CC1 Nombre','CC2 Codigo','CC2 Nombre']];
-  data.forEach(r=>rows.push([r.fecha,r.colaboradores?.nombre||'',r.turnos?.nombre||'',r.turnos?.hora_entrada?.slice(0,5)||'',r.turnos?.hora_salida?.slice(0,5)||'',r.cc1?.codigo||'',r.cc1?.nombre||'',r.cc2?.codigo||'',r.cc2?.nombre||'']));
+  data.forEach(r=>{
+    let entrada=r.hora_entrada_custom?.slice(0,5)||r.turnos?.hora_entrada?.slice(0,5)||'';
+    let salida=r.hora_salida_custom?.slice(0,5)||r.turnos?.hora_salida?.slice(0,5)||'';
+    if(!r.hora_entrada_custom&&r.turnos?.nombre==='Normal'){
+      const h=horarioNormal(new Date(r.fecha+'T12:00:00'));
+      entrada=h.entrada;salida=h.salida;
+    }
+    rows.push([r.fecha,r.colaboradores?.nombre||'',r.turnos?.nombre||'',entrada,salida,r.cc1?.codigo||'',r.cc1?.nombre||'',r.cc2?.codigo||'',r.cc2?.nombre||'']);
+  });
   const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
