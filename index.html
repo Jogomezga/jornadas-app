@@ -688,9 +688,17 @@ async function generarPDFBlob(){
   const key=dateKey(currentDate);
   const{data}=await sb.from('programacion').select('*').eq('fecha',key);
   if(!data||!data.length) return null;
+
   const grupos={};
+  const novedades=[];
+
   data.forEach(r=>{
     const colab=colaboradores.find(c=>c.id===r.colaborador_id);
+    // Si tiene novedad, separar
+    if(r.novedad){
+      novedades.push({nombre:colab?.nombre||'',novedad:r.novedad});
+      return;
+    }
     const turno=turnos.find(t=>t.id===r.turno_id);
     const cc=centrosTodos.find(c=>c.id===r.centro_costo_id);
     const cc2=r.centro_costo_id2?centrosTodos.find(c=>c.id===r.centro_costo_id2):null;
@@ -715,15 +723,20 @@ async function generarPDFBlob(){
       grupos[k2].push({nombre:colab?.nombre||'',horario:'Jornada partida'});
     }
   });
+
   const{jsPDF}=window.jspdf;
   const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
   const W=210,margin=15; let y=margin;
+
+  // Encabezado
   doc.setFillColor(67,56,202); doc.rect(0,0,W,28,'F');
   doc.setTextColor(255,255,255); doc.setFontSize(16); doc.setFont('helvetica','bold');
   doc.text('Programacion de Jornadas',margin,12);
   doc.setFontSize(11); doc.setFont('helvetica','normal');
   doc.text(DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()]+' '+currentDate.getFullYear(),margin,21);
   doc.setTextColor(0,0,0); y=36;
+
+  // Proyectos
   const entries=Object.entries(grupos).sort((a,b)=>a[0].localeCompare(b[0]));
   entries.forEach(([k,miembros])=>{
     const[cod,nom]=k.split('||');
@@ -740,6 +753,38 @@ async function generarPDFBlob(){
     });
     y+=4;
   });
+
+  // Sección de novedades al final
+  if(novedades.length>0){
+    if(y>250){doc.addPage();y=margin;}
+    y+=4;
+    // Cabecera sección novedades
+    doc.setFillColor(254,243,199); doc.rect(margin,y,W-margin*2,8,'F');
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(146,64,14);
+    doc.text('NOVEDADES DEL DIA',margin+2,y+5.5);
+    doc.setTextColor(0,0,0); y+=10;
+
+    // Agrupar por tipo de novedad
+    const grupos_nov={'vacaciones':[],'incapacidad':[],'permiso':[]};
+    novedades.forEach(n=>{ if(grupos_nov[n.novedad]) grupos_nov[n.novedad].push(n.nombre); });
+    const nov_labels={'vacaciones':'Vacaciones','incapacidad':'Incapacidad','permiso':'Permiso'};
+
+    Object.entries(grupos_nov).forEach(([tipo,nombres])=>{
+      if(!nombres.length) return;
+      if(y>265){doc.addPage();y=margin;}
+      doc.setFontSize(9.5); doc.setFont('helvetica','bold'); doc.setTextColor(146,64,14);
+      doc.text(nov_labels[tipo]+':',margin+2,y);
+      doc.setTextColor(0,0,0); y+=6;
+      nombres.forEach(nombre=>{
+        if(y>270){doc.addPage();y=margin;}
+        doc.setFont('helvetica','normal');
+        doc.text('  '+nombre,margin+4,y);
+        y+=6;
+      });
+      y+=2;
+    });
+  }
+
   doc.setFontSize(8); doc.setTextColor(150,150,150);
   doc.text('Generado por Jornadas App',margin,290);
   return doc.output('blob');
