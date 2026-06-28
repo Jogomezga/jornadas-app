@@ -126,7 +126,14 @@
   .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--gray-900); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 200; white-space: nowrap; max-width: 90vw; text-align: center; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .empty { text-align: center; padding: 40px 24px; color: var(--gray-400); font-size: 14px; }
-  .av0{background:#EEF2FF;color:#4338CA} .av1{background:#D1FAE5;color:#065F46} .av2{background:#FEF3C7;color:#92400E} .av3{background:#FCE7F3;color:#9D174D} .av4{background:#E0F2FE;color:#0C4A6E} .av5{background:#F0FDF4;color:#14532D}
+  .novedad-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 4px; }
+  .novedad-opt { border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); padding: 14px 6px; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .novedad-opt:active { border-color: var(--warning); }
+  .novedad-opt.sel { border-color: var(--warning); background: var(--warning-light); }
+  .novedad-icon { font-size: 24px; margin-bottom: 4px; }
+  .novedad-name { font-size: 12px; font-weight: 600; color: var(--gray-700); }
+  .novedad-opt.sel .novedad-name { color: var(--warning); }
+  .badge-novedad { background: #FEF3C7; color: #92400E; } .av1{background:#D1FAE5;color:#065F46} .av2{background:#FEF3C7;color:#92400E} .av3{background:#FCE7F3;color:#9D174D} .av4{background:#E0F2FE;color:#0C4A6E} .av5{background:#F0FDF4;color:#14532D}
 </style>
 </head>
 <body>
@@ -181,37 +188,71 @@
     <div class="modal-handle"></div>
     <div class="modal-title" id="modal-name"></div>
     <div class="modal-sub" id="modal-date-sub"></div>
-    <div class="section-title">Turno</div>
-    <div class="shift-grid" id="shift-grid"></div>
 
-    <!-- Horario editable (visible solo para turno Normal) -->
-    <div id="horario-section" style="display:none">
-      <div class="section-title">Horario</div>
-      <div class="time-hint" id="time-hint"></div>
-      <div class="time-row" style="margin-top:8px">
-        <div class="time-group">
-          <span class="time-label">Entrada</span>
-          <input class="time-input" type="time" id="input-entrada" onchange="recalcHint()">
+    <!-- Selector tipo: Proyecto o Novedad -->
+    <div class="section-title">Tipo de asignación</div>
+    <div class="shift-grid" style="grid-template-columns:1fr 1fr;margin-bottom:4px">
+      <div class="shift-opt sel" id="tipo-proyecto" onclick="setTipo('proyecto')">
+        <div class="shift-opt-name">🏗️ Proyecto</div>
+        <div class="shift-opt-time">Asignar a obra</div>
+      </div>
+      <div class="shift-opt" id="tipo-novedad" onclick="setTipo('novedad')">
+        <div class="shift-opt-name">📋 Novedad</div>
+        <div class="shift-opt-time">Ausencia</div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN PROYECTO -->
+    <div id="seccion-proyecto">
+      <div class="section-title">Turno</div>
+      <div class="shift-grid" id="shift-grid"></div>
+      <div id="horario-section" style="display:none">
+        <div class="section-title">Horario</div>
+        <div class="time-hint" id="time-hint"></div>
+        <div class="time-row" style="margin-top:8px">
+          <div class="time-group">
+            <span class="time-label">Entrada</span>
+            <input class="time-input" type="time" id="input-entrada" onchange="recalcHint()">
+          </div>
+          <div class="time-group">
+            <span class="time-label">Salida</span>
+            <input class="time-input" type="time" id="input-salida" onchange="recalcHint()">
+          </div>
         </div>
-        <div class="time-group">
-          <span class="time-label">Salida</span>
-          <input class="time-input" type="time" id="input-salida" onchange="recalcHint()">
+      </div>
+      <div class="section-title">Centro de costo principal</div>
+      <input class="search-input" id="cc-search" placeholder="🔍 Buscar por código o nombre..." oninput="renderCCList(1)">
+      <div class="cc-list" id="cc-list-1"></div>
+      <div class="split-row">
+        <div><div class="split-label">Jornada partida</div><div class="split-sub">Asignar segundo centro de costo</div></div>
+        <button class="toggle" id="split-toggle" onclick="toggleSplit()"></button>
+      </div>
+      <div id="cc2-section" style="display:none">
+        <div class="section-title">Segundo centro de costo</div>
+        <input class="search-input" id="cc-search2" placeholder="🔍 Buscar segundo centro..." oninput="renderCCList(2)">
+        <div class="cc-list" id="cc-list-2"></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN NOVEDAD -->
+    <div id="seccion-novedad" style="display:none">
+      <div class="section-title">Categoría de ausencia</div>
+      <div class="novedad-grid">
+        <div class="novedad-opt" id="nov-vacaciones" onclick="selNovedad('vacaciones')">
+          <div class="novedad-icon">🏖️</div>
+          <div class="novedad-name">Vacaciones</div>
+        </div>
+        <div class="novedad-opt" id="nov-incapacidad" onclick="selNovedad('incapacidad')">
+          <div class="novedad-icon">🏥</div>
+          <div class="novedad-name">Incapacidad</div>
+        </div>
+        <div class="novedad-opt" id="nov-permiso" onclick="selNovedad('permiso')">
+          <div class="novedad-icon">📝</div>
+          <div class="novedad-name">Permiso</div>
         </div>
       </div>
     </div>
 
-    <div class="section-title">Centro de costo principal</div>
-    <input class="search-input" id="cc-search" placeholder="🔍 Buscar por código o nombre..." oninput="renderCCList(1)">
-    <div class="cc-list" id="cc-list-1"></div>
-    <div class="split-row">
-      <div><div class="split-label">Jornada partida</div><div class="split-sub">Asignar segundo centro de costo</div></div>
-      <button class="toggle" id="split-toggle" onclick="toggleSplit()"></button>
-    </div>
-    <div id="cc2-section" style="display:none">
-      <div class="section-title">Segundo centro de costo</div>
-      <input class="search-input" id="cc-search2" placeholder="🔍 Buscar segundo centro..." oninput="renderCCList(2)">
-      <div class="cc-list" id="cc-list-2"></div>
-    </div>
     <button class="btn btn-primary" onclick="saveAssignment()">✓ Guardar programación</button>
     <button class="btn btn-danger" id="btn-clear" onclick="clearAssignment()" style="display:none">✕ Quitar asignación</button>
   </div>
@@ -245,6 +286,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let colaboradores=[], centros=[], centrosTodos=[], turnos=[], programacion={};
 let currentDate=new Date(), currentMonth=new Date();
 let currentColabIdx=null, splitOn=false, selShift=null, selCC=null, selCC2=null;
+let tipoAsignacion='proyecto', selNovedad_val=null;
 let proyFilter='todos';
 const AVC=['av0','av1','av2','av3','av4','av5'];
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -321,6 +363,8 @@ function getHorarioReal(asn){
   return turno.hora_entrada.slice(0,5)+' – '+turno.hora_salida.slice(0,5);
 }
 
+const NOVEDAD_LABEL={'vacaciones':'🏖️ Vacaciones','incapacidad':'🏥 Incapacidad','permiso':'📝 Permiso'};
+
 function renderCollabs(){
   const prog=Object.keys(programacion).length;
   const ccs=new Set(Object.values(programacion).flatMap(r=>[r.centro_costo_id,r.centro_costo_id2].filter(Boolean)));
@@ -328,14 +372,23 @@ function renderCollabs(){
   document.getElementById('stat-cc').textContent=ccs.size;
   document.getElementById('collab-list').innerHTML=colaboradores.map((c,i)=>{
     const asn=programacion[c.id];
-    const cc=asn?centrosTodos.find(x=>x.id===asn.centro_costo_id):null;
-    const cc2=asn&&asn.centro_costo_id2?centrosTodos.find(x=>x.id===asn.centro_costo_id2):null;
-    const turno=asn?turnos.find(x=>x.id===asn.turno_id):null;
     const av=c.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    const ccLabel=cc?cc.codigo+' · '+cc.nombre.slice(0,28):'Sin asignar';
-    const badge=asn?'<span class="badge badge-ok">✓ Listo</span>':'<span class="badge badge-pending">Pendiente</span>';
-    const horario=getHorarioReal(asn);
-    const shiftTag=turno?`<div class="shift-tag">⏰ ${turno.nombre} ${horario}${cc2?' · '+cc2.codigo:''}</div>`:'';
+    let ccLabel, badge, shiftTag='';
+    if(asn&&asn.novedad){
+      ccLabel=NOVEDAD_LABEL[asn.novedad]||asn.novedad;
+      badge='<span class="badge badge-novedad">'+ccLabel+'</span>';
+    } else if(asn){
+      const cc=centrosTodos.find(x=>x.id===asn.centro_costo_id);
+      const cc2=asn.centro_costo_id2?centrosTodos.find(x=>x.id===asn.centro_costo_id2):null;
+      const turno=turnos.find(x=>x.id===asn.turno_id);
+      ccLabel=cc?cc.codigo+' · '+cc.nombre.slice(0,28):'Sin asignar';
+      badge='<span class="badge badge-ok">✓ Listo</span>';
+      const horario=getHorarioReal(asn);
+      shiftTag=turno?`<div class="shift-tag">⏰ ${turno.nombre} ${horario}${cc2?' · '+cc2.codigo:''}</div>`:'';
+    } else {
+      ccLabel='Sin asignar';
+      badge='<span class="badge badge-pending">Pendiente</span>';
+    }
     return `<div class="collab-card ${asn?'assigned':'pending'}" onclick="openModal(${i})">
       <div class="card-top">
         <div class="avatar ${AVC[i%6]}">${av}</div>
@@ -360,6 +413,8 @@ function openModal(idx){
   currentColabIdx=idx;
   const c=colaboradores[idx];
   const asn=programacion[c.id];
+  tipoAsignacion=asn&&asn.novedad?'novedad':'proyecto';
+  selNovedad_val=asn?.novedad||null;
   selShift=asn?asn.turno_id:(getTurnoNormal()?.id||turnos[0]?.id||null);
   selCC=asn?asn.centro_costo_id:null;
   selCC2=asn?asn.centro_costo_id2:null;
@@ -371,21 +426,43 @@ function openModal(idx){
   document.getElementById('cc2-section').style.display=splitOn?'block':'none';
   document.getElementById('btn-clear').style.display=asn?'block':'none';
   document.getElementById('split-toggle').classList.toggle('on',splitOn);
-
-  // Horario custom si existe
   if(asn&&asn.hora_entrada_custom){
     document.getElementById('input-entrada').value=asn.hora_entrada_custom.slice(0,5);
     document.getElementById('input-salida').value=asn.hora_salida_custom.slice(0,5);
+  } else if(isNocturno(selShift)){
+    const t=getTurnoNocturno();
+    document.getElementById('input-entrada').value=t?t.hora_entrada.slice(0,5):'21:00';
+    document.getElementById('input-salida').value=t?t.hora_salida.slice(0,5):'06:00';
   } else {
     const h=horarioNormal(currentDate);
     document.getElementById('input-entrada').value=h.entrada;
     document.getElementById('input-salida').value=h.salida;
   }
-
+  setTipo(tipoAsignacion);
   renderShifts();
   updateHorarioSection();
   renderCCList(1);renderCCList(2);
   document.getElementById('modal').classList.add('open');
+}
+
+function setTipo(tipo){
+  tipoAsignacion=tipo;
+  document.getElementById('tipo-proyecto').classList.toggle('sel',tipo==='proyecto');
+  document.getElementById('tipo-novedad').classList.toggle('sel',tipo==='novedad');
+  document.getElementById('seccion-proyecto').style.display=tipo==='proyecto'?'block':'none';
+  document.getElementById('seccion-novedad').style.display=tipo==='novedad'?'block':'none';
+  if(tipo==='novedad') renderNovedadOpts();
+}
+
+function selNovedad(val){
+  selNovedad_val=val;
+  renderNovedadOpts();
+}
+
+function renderNovedadOpts(){
+  ['vacaciones','incapacidad','permiso'].forEach(n=>{
+    document.getElementById('nov-'+n).classList.toggle('sel',selNovedad_val===n);
+  });
 }
 
 function updateHorarioSection(){
@@ -472,28 +549,38 @@ function toggleSplit(){
 }
 
 async function saveAssignment(){
-  if(!selShift||!selCC){showToast('Selecciona turno y centro de costo');return;}
   const c=colaboradores[currentColabIdx];
   const key=dateKey(currentDate);
-  let hora_entrada_custom=null, hora_salida_custom=null;
-  if(isEditable(selShift)){
-    let defaultEntrada, defaultSalida;
-    if(isNormal(selShift)){
-      const h=horarioNormal(currentDate);
-      defaultEntrada=h.entrada; defaultSalida=h.salida;
-    } else {
-      const t=getTurnoNocturno();
-      defaultEntrada=t?t.hora_entrada.slice(0,5):'21:00';
-      defaultSalida=t?t.hora_salida.slice(0,5):'06:00';
+  let payload;
+
+  if(tipoAsignacion==='novedad'){
+    if(!selNovedad_val){showToast('Selecciona una categoría de ausencia');return;}
+    payload={fecha:key,colaborador_id:c.id,novedad:selNovedad_val,
+      turno_id:null,centro_costo_id:null,centro_costo_id2:null,
+      hora_entrada_custom:null,hora_salida_custom:null};
+  } else {
+    if(!selShift||!selCC){showToast('Selecciona turno y centro de costo');return;}
+    let hora_entrada_custom=null, hora_salida_custom=null;
+    if(isEditable(selShift)){
+      let defaultEntrada, defaultSalida;
+      if(isNormal(selShift)){
+        const h=horarioNormal(currentDate);
+        defaultEntrada=h.entrada; defaultSalida=h.salida;
+      } else {
+        const t=getTurnoNocturno();
+        defaultEntrada=t?t.hora_entrada.slice(0,5):'21:00';
+        defaultSalida=t?t.hora_salida.slice(0,5):'06:00';
+      }
+      const entrada=document.getElementById('input-entrada').value;
+      const salida=document.getElementById('input-salida').value;
+      if(entrada!==defaultEntrada||salida!==defaultSalida){
+        hora_entrada_custom=entrada; hora_salida_custom=salida;
+      }
     }
-    const entrada=document.getElementById('input-entrada').value;
-    const salida=document.getElementById('input-salida').value;
-    if(entrada!==defaultEntrada||salida!==defaultSalida){
-      hora_entrada_custom=entrada; hora_salida_custom=salida;
-    }
+    payload={fecha:key,colaborador_id:c.id,turno_id:selShift,centro_costo_id:selCC,
+      centro_costo_id2:splitOn?selCC2:null,hora_entrada_custom,hora_salida_custom,novedad:null};
   }
-  const payload={fecha:key,colaborador_id:c.id,turno_id:selShift,centro_costo_id:selCC,
-    centro_costo_id2:splitOn?selCC2:null,hora_entrada_custom,hora_salida_custom};
+
   const existing=programacion[c.id];
   const{error}=existing
     ?await sb.from('programacion').update(payload).eq('id',existing.id)
