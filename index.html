@@ -55,7 +55,7 @@
   .modal-title { font-size: 17px; font-weight: 700; }
   .modal-sub { font-size: 13px; color: var(--gray-500); margin-top: 2px; margin-bottom: 16px; }
   .section-title { font-size: 11px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; margin: 14px 0 8px; }
-  .shift-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+  .shift-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
   .shift-opt { border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); padding: 10px 6px; text-align: center; cursor: pointer; }
   .shift-opt.sel { border-color: var(--primary); background: var(--primary-light); }
   .shift-opt-name { font-size: 13px; font-weight: 600; color: var(--gray-700); }
@@ -271,12 +271,14 @@ async function init(){
     const [{data:c,error:e1},{data:cc,error:e2},{data:t,error:e3}]=await Promise.all([
       sb.from('colaboradores').select('id,nombre').eq('activo',true).order('nombre'),
       sb.from('centros_costo').select('id,codigo,nombre,activo').order('codigo'),
-      sb.from('turnos').select('*').order('id')
+      sb.from('turnos').select('*').eq('activo',true).order('id')
     ]);
     if(e1) throw new Error('colaboradores: '+e1.message);
     if(e2) throw new Error('centros_costo: '+e2.message);
     if(e3) throw new Error('turnos: '+e3.message);
-    colaboradores=c||[]; centrosTodos=cc||[]; centros=centrosTodos.filter(x=>x.activo); turnos=t||[];
+    colaboradores=c||[]; centrosTodos=cc||[]; centros=centrosTodos.filter(x=>x.activo);
+    const order={'Normal':0,'Nocturno':1};
+    turnos=(t||[]).sort((a,b)=>(order[a.nombre]??9)-(order[b.nombre]??9));
     if(!colaboradores.length){showError('No se encontraron colaboradores.');return;}
     await loadProgramacion();
   }catch(err){showError(err.message);}
