@@ -155,11 +155,11 @@
     </div>
     <div class="view" id="view-report">
       <div class="month-nav">
-        <button class="month-btn" onclick="changeMonth(-1)">‹ Anterior</button>
+        <button class="month-btn" onclick="changeDate(-1);loadReport()">‹ Anterior</button>
         <div class="month-label" id="month-label"></div>
-        <button class="month-btn" onclick="changeMonth(1)">Siguiente ›</button>
+        <button class="month-btn" onclick="changeDate(1);loadReport()">Siguiente ›</button>
       </div>
-      <button class="pdf-btn" onclick="exportPDFDia()">📄 PDF programación del día</button>
+      <button class="pdf-btn" onclick="compartirPDF()">📤 Compartir programación del día</button>
       <div id="report-content" style="margin-top:12px"><div class="loading"><div class="spinner"></div></div></div>
     </div>
     <div class="view" id="view-proyectos">
@@ -566,7 +566,99 @@ async function guardarProyecto(){
   showToast('✓ Proyecto '+codigo+' agregado');
 }
 
-// ─── PDF DEL DÍA ────────────────────────────────────────────────────
+// ─── COMPARTIR PDF ───────────────────────────────────────────────────
+async function compartirPDF(){
+  showToast('Generando PDF...');
+  const blob = await generarPDFBlob();
+  if(!blob){ showToast('No hay programación para este día'); return; }
+  const key = dateKey(currentDate);
+  const fileName = 'programacion_'+key+'.pdf';
+  const file = new File([blob], fileName, {type:'application/pdf'});
+
+  // Intentar compartir nativo (móvil)
+  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({
+        title: 'Programación '+DAYS[currentDate.getDay()]+' '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()],
+        text: 'Programación de jornadas del día',
+        files: [file]
+      });
+      return;
+    } catch(e){
+      if(e.name==='AbortError') return; // Usuario canceló
+    }
+  }
+
+  // Fallback: descargar el PDF
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=fileName; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ PDF descargado — compártelo desde tu galería');
+}
+
+async function generarPDFBlob(){
+  const key=dateKey(currentDate);
+  const{data}=await sb.from('programacion').select('*').eq('fecha',key);
+  if(!data||!data.length) return null;
+  const grupos={};
+  data.forEach(r=>{
+    const colab=colaboradores.find(c=>c.id===r.colaborador_id);
+    const turno=turnos.find(t=>t.id===r.turno_id);
+    const cc=centrosTodos.find(c=>c.id===r.centro_costo_id);
+    const cc2=r.centro_costo_id2?centrosTodos.find(c=>c.id===r.centro_costo_id2):null;
+    let entrada,salida;
+    if(r.hora_entrada_custom&&r.hora_salida_custom){
+      entrada=r.hora_entrada_custom.slice(0,5); salida=r.hora_salida_custom.slice(0,5);
+    } else if(turno&&turno.nombre==='Normal'){
+      const h=horarioNormal(currentDate); entrada=h.entrada; salida=h.salida;
+    } else {
+      entrada=turno?turno.hora_entrada.slice(0,5):'';
+      salida=turno?turno.hora_salida.slice(0,5):'';
+    }
+    const horario=entrada+' - '+salida;
+    if(cc){
+      const k=cc.codigo+'||'+cc.nombre;
+      if(!grupos[k])grupos[k]=[];
+      grupos[k].push({nombre:colab?.nombre||'',horario});
+    }
+    if(cc2){
+      const k2=cc2.codigo+'||'+cc2.nombre;
+      if(!grupos[k2])grupos[k2]=[];
+      grupos[k2].push({nombre:colab?.nombre||'',horario:'Jornada partida'});
+    }
+  });
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,margin=15; let y=margin;
+  doc.setFillColor(67,56,202); doc.rect(0,0,W,28,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text('Programacion de Jornadas',margin,12);
+  doc.setFontSize(11); doc.setFont('helvetica','normal');
+  doc.text(DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()]+' '+currentDate.getFullYear(),margin,21);
+  doc.setTextColor(0,0,0); y=36;
+  const entries=Object.entries(grupos).sort((a,b)=>a[0].localeCompare(b[0]));
+  entries.forEach(([k,miembros])=>{
+    const[cod,nom]=k.split('||');
+    if(y>260){doc.addPage();y=margin;}
+    doc.setFillColor(238,242,255); doc.rect(margin,y,W-margin*2,8,'F');
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(67,56,202);
+    doc.text(cod+' - '+nom,margin+2,y+5.5); doc.setTextColor(0,0,0); y+=10;
+    miembros.forEach(m=>{
+      if(y>270){doc.addPage();y=margin;}
+      doc.setFontSize(9.5); doc.setFont('helvetica','normal');
+      doc.text('  '+m.nombre,margin+2,y);
+      doc.setTextColor(100,100,100); doc.text(m.horario,W-margin-38,y);
+      doc.setTextColor(0,0,0); y+=6;
+    });
+    y+=4;
+  });
+  doc.setFontSize(8); doc.setTextColor(150,150,150);
+  doc.text('Generado por Jornadas App',margin,290);
+  return doc.output('blob');
+}
+
+
 async function exportPDFDia(){
   showToast('Generando PDF...');
   const key=dateKey(currentDate);
@@ -632,40 +724,44 @@ async function exportPDFDia(){
 // ─── REPORTE MENSUAL ─────────────────────────────────────────────────
 async function loadReport(){
   document.getElementById('report-content').innerHTML='<div class="loading"><div class="spinner"></div></div>';
-  document.getElementById('month-label').textContent=MONTHS[currentMonth.getMonth()]+' '+currentMonth.getFullYear();
-  const y=currentMonth.getFullYear(),m=currentMonth.getMonth();
-  const from=new Date(y,m,1).toISOString().slice(0,10);
-  const to=new Date(y,m+1,0).toISOString().slice(0,10);
-  const{data}=await sb.from('programacion').select('*,turnos(*),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').gte('fecha',from).lte('fecha',to);
-  if(!data||!data.length){document.getElementById('report-content').innerHTML='<div class="empty">No hay programaciones este mes.</div>';return;}
-  const hrsCC={};
+  document.getElementById('month-label').textContent=DAYS[currentDate.getDay()]+' '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()];
+  const key=dateKey(currentDate);
+  const{data}=await sb.from('programacion').select('colaborador_id,cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').eq('fecha',key);
+  if(!data||!data.length){document.getElementById('report-content').innerHTML='<div class="empty">No hay programaciones para este día.</div>';return;}
+
+  // Agrupar colaboradores por proyecto
+  const grupos={};
   data.forEach(r=>{
-    let hrs;
-    if(r.hora_entrada_custom&&r.hora_salida_custom){
-      const[h1,m1]=r.hora_entrada_custom.split(':').map(Number);
-      const[h2,m2]=r.hora_salida_custom.split(':').map(Number);
-      hrs=(h2*60+m2-h1*60-m1)/60;
-    } else if(r.turnos&&r.turnos.nombre==='Normal'){
-      const fecha=new Date(r.fecha+'T12:00:00');
-      const h=horarioNormal(fecha);
-      const[h1,m1]=h.entrada.split(':').map(Number);
-      const[h2,m2]=h.salida.split(':').map(Number);
-      hrs=(h2*60+m2-h1*60-m1)/60;
-    } else {
-      hrs=calcHrs(r.turnos);
+    const colab=colaboradores.find(c=>c.id===r.colaborador_id);
+    const nombre=colab?.nombre||'';
+    if(r.cc1){
+      const k=r.cc1.codigo+'|'+r.cc1.nombre;
+      if(!grupos[k])grupos[k]=[];
+      grupos[k].push(nombre);
     }
-    if(r.cc1){const k=r.cc1.codigo+'|'+r.cc1.nombre;hrsCC[k]=(hrsCC[k]||0)+(r.cc2?hrs*0.6:hrs);}
-    if(r.cc2){const k2=r.cc2.codigo+'|'+r.cc2.nombre;hrsCC[k2]=(hrsCC[k2]||0)+hrs*0.4;}
+    if(r.cc2){
+      const k2=r.cc2.codigo+'|'+r.cc2.nombre;
+      if(!grupos[k2])grupos[k2]=[];
+      grupos[k2].push(nombre);
+    }
   });
-  const entries=Object.entries(hrsCC).sort((a,b)=>b[1]-a[1]);
-  const max=entries[0]?entries[0][1]:1;
+
+  const entries=Object.entries(grupos).sort((a,b)=>b[1].length-a[1].length);
+  const max=entries[0]?entries[0][1].length:1;
   document.getElementById('report-content').innerHTML=`<div class="report-card">
-    <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:4px">Horas por centro de costo</div>
-    <div style="font-size:12px;color:#9CA3AF;margin-bottom:12px">${data.length} registros</div>
-    ${entries.map(([k,hrs])=>{const[cod,nom]=k.split('|');return`<div class="report-row">
-      <div class="report-cc"><div class="report-code">${cod}</div><div>${nom.slice(0,32)}</div>
-      <div class="progress"><div class="progress-fill" style="width:${Math.round(hrs/max*100)}%"></div></div></div>
-      <div class="report-hrs">${Math.round(hrs)}h</div></div>`;}).join('')}
+    <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:4px">Colaboradores por proyecto</div>
+    <div style="font-size:12px;color:#9CA3AF;margin-bottom:12px">${entries.length} proyectos · ${data.length} colaboradores programados</div>
+    ${entries.map(([k,colabs])=>{
+      const[cod,nom]=k.split('|');
+      return`<div class="report-row">
+        <div class="report-cc">
+          <div class="report-code">${cod}</div>
+          <div>${nom.slice(0,32)}</div>
+          <div class="progress"><div class="progress-fill" style="width:${Math.round(colabs.length/max*100)}%"></div></div>
+        </div>
+        <div class="report-hrs">${colabs.length} 👤</div>
+      </div>`;
+    }).join('')}
   </div>`;
 }
 
