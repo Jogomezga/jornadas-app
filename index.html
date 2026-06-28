@@ -263,7 +263,10 @@ function horarioNormal(fecha){
 }
 
 function getTurnoNormal(){ return turnos.find(t=>t.nombre==='Normal'); }
+function getTurnoNocturno(){ return turnos.find(t=>t.nombre==='Nocturno'); }
 function isNormal(id){ const t=getTurnoNormal(); return t&&t.id===id; }
+function isNocturno(id){ const t=getTurnoNocturno(); return t&&t.id===id; }
+function isEditable(id){ return isNormal(id)||isNocturno(id); }
 
 async function init(){
   updateDateLabels();
@@ -387,18 +390,27 @@ function openModal(idx){
 }
 
 function updateHorarioSection(){
-  const show=isNormal(selShift);
+  const show=isEditable(selShift);
   document.getElementById('horario-section').style.display=show?'block':'none';
   if(show) recalcHint();
 }
 
 function recalcHint(){
-  const h=horarioNormal(currentDate);
+  let defaultEntrada, defaultSalida, label;
+  if(isNormal(selShift)){
+    const h=horarioNormal(currentDate);
+    defaultEntrada=h.entrada; defaultSalida=h.salida; label=h.label;
+  } else {
+    const t=getTurnoNocturno();
+    defaultEntrada=t?t.hora_entrada.slice(0,5):'21:00';
+    defaultSalida=t?t.hora_salida.slice(0,5):'06:00';
+    label='Nocturno: '+defaultEntrada+' - '+defaultSalida;
+  }
   const entrada=document.getElementById('input-entrada').value;
   const salida=document.getElementById('input-salida').value;
-  const esDefault=entrada===h.entrada&&salida===h.salida;
+  const esDefault=entrada===defaultEntrada&&salida===defaultSalida;
   document.getElementById('time-hint').textContent=esDefault
-    ? '⏰ Horario normal: '+h.label
+    ? '⏰ Horario por defecto: '+label
     : '✏️ Horario modificado para este colaborador';
 }
 
@@ -425,11 +437,16 @@ function selShiftFn(id){
   selShift=id;
   renderShifts();
   updateHorarioSection();
-  // Reset horario al default del día si cambia a Normal
+  // Reset horario al default si cambia a turno editable
   if(isNormal(id)){
     const h=horarioNormal(currentDate);
     document.getElementById('input-entrada').value=h.entrada;
     document.getElementById('input-salida').value=h.salida;
+    recalcHint();
+  } else if(isNocturno(id)){
+    const t=getTurnoNocturno();
+    document.getElementById('input-entrada').value=t?t.hora_entrada.slice(0,5):'21:00';
+    document.getElementById('input-salida').value=t?t.hora_salida.slice(0,5):'06:00';
     recalcHint();
   }
 }
@@ -460,11 +477,19 @@ async function saveAssignment(){
   const c=colaboradores[currentColabIdx];
   const key=dateKey(currentDate);
   let hora_entrada_custom=null, hora_salida_custom=null;
-  if(isNormal(selShift)){
-    const h=horarioNormal(currentDate);
+  if(isEditable(selShift)){
+    let defaultEntrada, defaultSalida;
+    if(isNormal(selShift)){
+      const h=horarioNormal(currentDate);
+      defaultEntrada=h.entrada; defaultSalida=h.salida;
+    } else {
+      const t=getTurnoNocturno();
+      defaultEntrada=t?t.hora_entrada.slice(0,5):'21:00';
+      defaultSalida=t?t.hora_salida.slice(0,5):'06:00';
+    }
     const entrada=document.getElementById('input-entrada').value;
     const salida=document.getElementById('input-salida').value;
-    if(entrada!==h.entrada||salida!==h.salida){
+    if(entrada!==defaultEntrada||salida!==defaultSalida){
       hora_entrada_custom=entrada; hora_salida_custom=salida;
     }
   }
