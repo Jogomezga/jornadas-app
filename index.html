@@ -6,6 +6,7 @@
 <title>Jornadas App</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root {
     --primary: #4338CA; --primary-light: #EEF2FF; --primary-dark: #3730A3;
@@ -168,6 +169,8 @@
         <button class="month-btn" onclick="changeDate(1);loadReport()">Siguiente ›</button>
       </div>
       <button class="pdf-btn" onclick="exportPDFDia()">📄 PDF programación del día</button>
+      <button class="pdf-btn" style="background:#2563EB" onclick="openExcelRango()">📊 Exportar Excel (rango de fechas)</button>
+      <button class="pdf-btn" style="background:#7C3AED" onclick="openFIC()">🧮 Reporte FIC (personas por proyecto)</button>
       <div id="report-content" style="margin-top:12px"><div class="loading"><div class="spinner"></div></div></div>
     </div>
     <div class="view" id="view-proyectos">
@@ -298,6 +301,46 @@
       <input class="form-input" id="input-colab-nombre" placeholder="Ej: Juan Pérez Gómez" type="text">
     </div>
     <button class="btn btn-primary" onclick="guardarColaborador()">✓ Guardar colaborador</button>
+  </div>
+</div>
+
+<!-- MODAL EXCEL RANGO DE FECHAS -->
+<div class="modal-backdrop" id="modal-excel-rango" onclick="closeExcelRangoOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Exportar Excel</div>
+    <div class="modal-sub">Selecciona el rango de fechas a incluir</div>
+    <div class="form-group">
+      <label class="form-label">Desde</label>
+      <input class="form-input" id="excel-desde" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hasta</label>
+      <input class="form-input" id="excel-hasta" type="date">
+    </div>
+    <button class="btn btn-primary" onclick="generarExcelRango()">✓ Generar Excel</button>
+  </div>
+</div>
+
+<!-- MODAL REPORTE FIC -->
+<div class="modal-backdrop" id="modal-fic" onclick="closeFICOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Reporte FIC</div>
+    <div class="modal-sub">Colaboradores distintos por proyecto en el rango seleccionado</div>
+    <div class="form-group">
+      <label class="form-label">Desde</label>
+      <input class="form-input" id="fic-desde" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hasta</label>
+      <input class="form-input" id="fic-hasta" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Centro de costos</label>
+      <select class="form-input" id="fic-centro"></select>
+    </div>
+    <button class="btn btn-primary" onclick="generarFIC()">✓ Generar reporte FIC</button>
   </div>
 </div>
 
@@ -732,6 +775,123 @@ async function toggleColaborador(id,activo){
   colaboradores=colaboradoresTodos.filter(x=>x.activo);
   renderEquipo();
   showToast(activo?'Colaborador desactivado (se conserva su historial)':'Colaborador reactivado');
+}
+
+// ─── EXPORTAR EXCEL POR RANGO DE FECHAS ─────────────────────────────
+function primerYUltimoDiaMes(){
+  const hoy=new Date();
+  const primero=new Date(hoy.getFullYear(),hoy.getMonth(),1);
+  const ultimo=new Date(hoy.getFullYear(),hoy.getMonth()+1,0);
+  return[dateKey(primero),dateKey(ultimo)];
+}
+function nombreColab(id){
+  const c=colaboradoresTodos.find(x=>x.id===id);
+  return c?c.nombre:'(colaborador eliminado)';
+}
+function labelNovedad(n){
+  return{vacaciones:'Vacaciones',incapacidad:'Incapacidad',permiso:'Permiso'}[n]||n;
+}
+function openExcelRango(){
+  const[d1,d2]=primerYUltimoDiaMes();
+  document.getElementById('excel-desde').value=d1;
+  document.getElementById('excel-hasta').value=d2;
+  document.getElementById('modal-excel-rango').classList.add('open');
+}
+function closeExcelRangoOutside(e){if(e.target===document.getElementById('modal-excel-rango'))document.getElementById('modal-excel-rango').classList.remove('open');}
+async function generarExcelRango(){
+  const desde=document.getElementById('excel-desde').value;
+  const hasta=document.getElementById('excel-hasta').value;
+  if(!desde||!hasta){showToast('Selecciona ambas fechas');return;}
+  if(desde>hasta){showToast('La fecha inicial debe ser menor a la final');return;}
+  showToast('Generando Excel...');
+  const{data,error}=await sb.from('programacion')
+    .select('fecha,colaborador_id,novedad,hora_entrada_custom,hora_salida_custom,turno:turno_id(nombre,hora_entrada,hora_salida),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)')
+    .gte('fecha',desde).lte('fecha',hasta).order('fecha');
+  if(error){showToast('Error: '+error.message);return;}
+  if(!data||!data.length){showToast('No hay programación en ese rango');return;}
+
+  const rows=[];
+  data.forEach(r=>{
+    const nombre=nombreColab(r.colaborador_id);
+    if(r.novedad){
+      rows.push({Fecha:r.fecha,Colaborador:nombre,Proyecto:'',Turno:'',Entrada:'',Salida:'',Novedad:labelNovedad(r.novedad)});
+      return;
+    }
+    const entrada=r.hora_entrada_custom||r.turno?.hora_entrada||'';
+    const salida=r.hora_salida_custom||r.turno?.hora_salida||'';
+    if(r.cc1) rows.push({Fecha:r.fecha,Colaborador:nombre,Proyecto:r.cc1.codigo+' - '+r.cc1.nombre,Turno:r.turno?.nombre||'',Entrada:entrada,Salida:salida,Novedad:''});
+    if(r.cc2) rows.push({Fecha:r.fecha,Colaborador:nombre,Proyecto:r.cc2.codigo+' - '+r.cc2.nombre,Turno:r.turno?.nombre||'',Entrada:entrada,Salida:salida,Novedad:''});
+  });
+  rows.sort((a,b)=>a.Fecha.localeCompare(b.Fecha)||a.Colaborador.localeCompare(b.Colaborador));
+
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:11},{wch:28},{wch:34},{wch:12},{wch:9},{wch:9},{wch:14}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Programación');
+  XLSX.writeFile(wb,'programacion_'+desde+'_a_'+hasta+'.xlsx');
+  document.getElementById('modal-excel-rango').classList.remove('open');
+  showToast('✓ Excel descargado');
+}
+
+// ─── REPORTE FIC (colaboradores distintos por proyecto/mes) ─────────
+function openFIC(){
+  const[d1,d2]=primerYUltimoDiaMes();
+  document.getElementById('fic-desde').value=d1;
+  document.getElementById('fic-hasta').value=d2;
+  const sel=document.getElementById('fic-centro');
+  sel.innerHTML='<option value="">Todos los proyectos</option>'+
+    centrosTodos.slice().sort((a,b)=>a.codigo.localeCompare(b.codigo))
+      .map(c=>`<option value="${c.id}">${c.codigo} - ${c.nombre}</option>`).join('');
+  document.getElementById('modal-fic').classList.add('open');
+}
+function closeFICOutside(e){if(e.target===document.getElementById('modal-fic'))document.getElementById('modal-fic').classList.remove('open');}
+async function generarFIC(){
+  const desde=document.getElementById('fic-desde').value;
+  const hasta=document.getElementById('fic-hasta').value;
+  const centroSel=document.getElementById('fic-centro').value;
+  if(!desde||!hasta){showToast('Selecciona ambas fechas');return;}
+  if(desde>hasta){showToast('La fecha inicial debe ser menor a la final');return;}
+  showToast('Generando reporte FIC...');
+  const{data,error}=await sb.from('programacion')
+    .select('colaborador_id,centro_costo_id,centro_costo_id2')
+    .gte('fecha',desde).lte('fecha',hasta).is('novedad',null);
+  if(error){showToast('Error: '+error.message);return;}
+  if(!data||!data.length){showToast('No hay programación en ese rango');return;}
+
+  const mapa={};
+  data.forEach(r=>{
+    [r.centro_costo_id,r.centro_costo_id2].forEach(cid=>{
+      if(!cid) return;
+      if(centroSel&&String(cid)!==centroSel) return;
+      if(!mapa[cid]) mapa[cid]=new Set();
+      mapa[cid].add(r.colaborador_id);
+    });
+  });
+  const centroIds=Object.keys(mapa).sort((a,b)=>{
+    const ca=centrosTodos.find(c=>String(c.id)===a),cb=centrosTodos.find(c=>String(c.id)===b);
+    return(ca?.codigo||'').localeCompare(cb?.codigo||'');
+  });
+  if(!centroIds.length){showToast('No hay datos para ese filtro');return;}
+
+  const resumenRows=[], detalleRows=[];
+  centroIds.forEach(cid=>{
+    const centro=centrosTodos.find(c=>String(c.id)===cid);
+    const set=mapa[cid];
+    resumenRows.push({Codigo:centro?.codigo||cid,Proyecto:centro?.nombre||'','Personas distintas':set.size});
+    set.forEach(colId=>detalleRows.push({Codigo:centro?.codigo||cid,Proyecto:centro?.nombre||'',Colaborador:nombreColab(colId)}));
+  });
+
+  const wb=XLSX.utils.book_new();
+  const ws1=XLSX.utils.json_to_sheet(resumenRows);
+  ws1['!cols']=[{wch:10},{wch:34},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws1,'FIC - Resumen');
+  const ws2=XLSX.utils.json_to_sheet(detalleRows);
+  ws2['!cols']=[{wch:10},{wch:34},{wch:28}];
+  XLSX.utils.book_append_sheet(wb,ws2,'FIC - Detalle');
+  const nombreArchivo=centroSel?('FIC_'+(centrosTodos.find(c=>String(c.id)===centroSel)?.codigo||centroSel)+'_'+desde+'_a_'+hasta+'.xlsx'):('FIC_'+desde+'_a_'+hasta+'.xlsx');
+  XLSX.writeFile(wb,nombreArchivo);
+  document.getElementById('modal-fic').classList.remove('open');
+  showToast('✓ Reporte FIC descargado');
 }
 
 // ─── COMPARTIR PDF ───────────────────────────────────────────────────
