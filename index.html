@@ -155,6 +155,7 @@
     <div class="tab active" onclick="switchTab('prog')"><span class="tab-icon">📅</span>Programar</div>
     <div class="tab" onclick="switchTab('report')"><span class="tab-icon">📊</span>Reporte</div>
     <div class="tab" onclick="switchTab('proyectos')"><span class="tab-icon">🏗️</span>Proyectos</div>
+    <div class="tab" onclick="switchTab('equipo')"><span class="tab-icon">👥</span>Equipo</div>
   </div>
   <div class="content">
     <div class="view active" id="view-prog">
@@ -178,6 +179,16 @@
         <button class="filter-btn" id="filter-inactivos" onclick="setFilter('inactivos')">Inactivos</button>
       </div>
       <div id="proj-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+    <div class="view" id="view-equipo">
+      <button class="add-btn" onclick="openNuevoColaborador()">＋ Agregar nuevo colaborador</button>
+      <input class="proj-search" id="equipo-search" placeholder="🔍 Buscar por nombre..." oninput="renderEquipo()">
+      <div class="proj-filter">
+        <button class="filter-btn active" id="efilter-todos" onclick="setEFilter('todos')">Todos</button>
+        <button class="filter-btn" id="efilter-activos" onclick="setEFilter('activos')">Activos</button>
+        <button class="filter-btn" id="efilter-inactivos" onclick="setEFilter('inactivos')">Inactivos</button>
+      </div>
+      <div id="equipo-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 </div>
@@ -276,6 +287,20 @@
   </div>
 </div>
 
+<!-- MODAL NUEVO COLABORADOR -->
+<div class="modal-backdrop" id="modal-colaborador" onclick="closeColaboradorOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nuevo colaborador</div>
+    <div class="modal-sub">Ingresa el nombre completo</div>
+    <div class="form-group">
+      <label class="form-label">Nombre completo</label>
+      <input class="form-input" id="input-colab-nombre" placeholder="Ej: Juan Pérez Gómez" type="text">
+    </div>
+    <button class="btn btn-primary" onclick="guardarColaborador()">✓ Guardar colaborador</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -283,11 +308,11 @@ const SUPABASE_URL = 'https://nlmdzeguypchouqsdyzx.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sbWR6ZWd1eXBjaG91cXNkeXp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4OTMwODksImV4cCI6MjA5NzQ2OTA4OX0.vN9nOwldbRO_me2LlRR95rvD5IV10C7EOPpT3GC6zxM';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let colaboradores=[], centros=[], centrosTodos=[], turnos=[], programacion={};
+let colaboradores=[], colaboradoresTodos=[], centros=[], centrosTodos=[], turnos=[], programacion={};
 let currentDate=new Date(), currentMonth=new Date();
 let currentColabIdx=null, splitOn=false, selShift=null, selCC=null, selCC2=null;
 let tipoAsignacion='proyecto', selNovedad_val=null;
-let proyFilter='todos';
+let proyFilter='todos', colabFilter='todos';
 const AVC=['av0','av1','av2','av3','av4','av5'];
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DAYS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -313,14 +338,14 @@ async function init(){
   updateDateLabels();
   try{
     const [{data:c,error:e1},{data:cc,error:e2},{data:t,error:e3}]=await Promise.all([
-      sb.from('colaboradores').select('id,nombre').eq('activo',true).order('nombre'),
+      sb.from('colaboradores').select('id,nombre,activo').order('nombre'),
       sb.from('centros_costo').select('id,codigo,nombre,activo').order('codigo'),
       sb.from('turnos').select('*').eq('activo',true).order('id')
     ]);
     if(e1) throw new Error('colaboradores: '+e1.message);
     if(e2) throw new Error('centros_costo: '+e2.message);
     if(e3) throw new Error('turnos: '+e3.message);
-    colaboradores=c||[]; centrosTodos=cc||[]; centros=centrosTodos.filter(x=>x.activo);
+    colaboradoresTodos=c||[]; colaboradores=colaboradoresTodos.filter(x=>x.activo); centrosTodos=cc||[]; centros=centrosTodos.filter(x=>x.activo);
     const order={'Normal':0,'Nocturno':1};
     turnos=(t||[]).sort((a,b)=>(order[a.nombre]??9)-(order[b.nombre]??9));
     if(!colaboradores.length){showError('No se encontraron colaboradores.');return;}
@@ -401,11 +426,12 @@ function renderCollabs(){
 function changeDate(d){currentDate.setDate(currentDate.getDate()+d);updateDateLabels();loadProgramacion();}
 
 function switchTab(t){
-  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['prog','report','proyectos'][i]===t));
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['prog','report','proyectos','equipo'][i]===t));
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+t).classList.add('active');
   if(t==='report') loadReport();
   if(t==='proyectos') renderProyectos();
+  if(t==='equipo') renderEquipo();
 }
 
 // ─── MODAL ASIGNACIÓN ───────────────────────────────────────────────
@@ -651,6 +677,61 @@ async function guardarProyecto(){
   document.getElementById('modal-proyecto').classList.remove('open');
   renderProyectos();
   showToast('✓ Proyecto '+codigo+' agregado');
+}
+
+// ─── EQUIPO ──────────────────────────────────────────────────────────
+function setEFilter(f){
+  colabFilter=f;
+  ['todos','activos','inactivos'].forEach(x=>document.getElementById('efilter-'+x).classList.toggle('active',x===f));
+  renderEquipo();
+}
+function renderEquipo(){
+  const q=(document.getElementById('equipo-search').value||'').toLowerCase();
+  const lista=colaboradoresTodos.filter(c=>{
+    const matchQ=c.nombre.toLowerCase().includes(q);
+    const matchF=colabFilter==='todos'||(colabFilter==='activos'&&c.activo)||(colabFilter==='inactivos'&&!c.activo);
+    return matchQ&&matchF;
+  });
+  if(!lista.length){document.getElementById('equipo-list').innerHTML='<div class="empty">No hay colaboradores que coincidan</div>';return;}
+  document.getElementById('equipo-list').innerHTML=lista.map((c,i)=>{
+    const av=c.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<div class="proj-card ${c.activo?'':'inactive'}">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+        <div class="avatar ${AVC[i%6]}" style="flex-shrink:0">${av}</div>
+        <div class="proj-info" style="margin-right:0">
+          <div class="proj-name" style="margin-top:0">${c.nombre}</div>
+        </div>
+      </div>
+      <button class="proj-toggle ${c.activo?'on':''}" onclick="toggleColaborador(${c.id},${c.activo})"></button>
+    </div>`;
+  }).join('');
+}
+function openNuevoColaborador(){
+  document.getElementById('input-colab-nombre').value='';
+  document.getElementById('modal-colaborador').classList.add('open');
+  setTimeout(()=>document.getElementById('input-colab-nombre').focus(),300);
+}
+function closeColaboradorOutside(e){if(e.target===document.getElementById('modal-colaborador'))document.getElementById('modal-colaborador').classList.remove('open');}
+async function guardarColaborador(){
+  const nombre=document.getElementById('input-colab-nombre').value.trim();
+  if(!nombre){showToast('Ingresa el nombre del colaborador');return;}
+  const{data,error}=await sb.from('colaboradores').insert({nombre,activo:true}).select().single();
+  if(error){showToast('Error: '+error.message);return;}
+  colaboradoresTodos.push(data);
+  colaboradoresTodos.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  colaboradores=colaboradoresTodos.filter(x=>x.activo);
+  document.getElementById('modal-colaborador').classList.remove('open');
+  renderEquipo();
+  showToast('✓ '+nombre.split(' ')[0]+' agregado al equipo');
+}
+async function toggleColaborador(id,activo){
+  const{error}=await sb.from('colaboradores').update({activo:!activo}).eq('id',id);
+  if(error){showToast('Error: '+error.message);return;}
+  const idx=colaboradoresTodos.findIndex(c=>c.id===id);
+  if(idx>=0)colaboradoresTodos[idx].activo=!activo;
+  colaboradores=colaboradoresTodos.filter(x=>x.activo);
+  renderEquipo();
+  showToast(activo?'Colaborador desactivado (se conserva su historial)':'Colaborador reactivado');
 }
 
 // ─── COMPARTIR PDF ───────────────────────────────────────────────────
