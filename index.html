@@ -160,6 +160,7 @@
   </div>
   <div class="content">
     <div class="view active" id="view-prog">
+      <button class="pdf-btn" style="background:#0891B2;margin-bottom:10px" onclick="abrirRepetir()">📋 Repetir programación de este día</button>
       <div id="collab-list"><div class="loading"><div class="spinner"></div><div style="font-size:13px;color:#6B7280">Cargando...</div></div></div>
     </div>
     <div class="view" id="view-report">
@@ -341,6 +342,24 @@
       <select class="form-input" id="fic-centro"></select>
     </div>
     <button class="btn btn-primary" onclick="generarFIC()">✓ Generar reporte FIC</button>
+  </div>
+</div>
+
+<!-- MODAL REPETIR PROGRAMACIÓN -->
+<div class="modal-backdrop" id="modal-repetir" onclick="closeRepetirOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Repetir programación</div>
+    <div class="modal-sub" id="repetir-sub">Copiará la programación de este día hacia los siguientes días</div>
+    <div class="form-group">
+      <label class="form-label">Repetir hasta (inclusive)</label>
+      <input class="form-input" id="repetir-hasta" type="date">
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="repetir-sobrescribir" style="width:18px;height:18px">
+      <label class="form-label" style="margin:0" for="repetir-sobrescribir">Sobrescribir si ya hay algo asignado ese día</label>
+    </div>
+    <button class="btn btn-primary" onclick="ejecutarRepetir()">✓ Repetir programación</button>
   </div>
 </div>
 
@@ -683,6 +702,7 @@ function renderProyectos(){
     return matchQ&&matchF;
   });
   if(!lista.length){document.getElementById('proj-list').innerHTML='<div class="empty">No hay proyectos que coincidan</div>';return;}
+  lista.sort((a,b)=>b.codigo.localeCompare(a.codigo,undefined,{numeric:true}));
   document.getElementById('proj-list').innerHTML=lista.map(c=>`
     <div class="proj-card ${c.activo?'':'inactive'}">
       <div class="proj-info">
@@ -892,6 +912,57 @@ async function generarFIC(){
   XLSX.writeFile(wb,nombreArchivo);
   document.getElementById('modal-fic').classList.remove('open');
   showToast('✓ Reporte FIC descargado');
+}
+
+// ─── REPETIR PROGRAMACIÓN EN DÍAS CONSECUTIVOS ──────────────────────
+function abrirRepetir(){
+  const d=currentDate;
+  document.getElementById('repetir-sub').textContent='Copiará la programación de '+DAYS_S[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()].slice(0,3)+' hacia los siguientes días';
+  const manana=new Date(currentDate); manana.setDate(manana.getDate()+1);
+  const key=dateKey(manana);
+  document.getElementById('repetir-hasta').value=key;
+  document.getElementById('repetir-hasta').min=key;
+  document.getElementById('repetir-sobrescribir').checked=false;
+  document.getElementById('modal-repetir').classList.add('open');
+}
+function closeRepetirOutside(e){if(e.target===document.getElementById('modal-repetir'))document.getElementById('modal-repetir').classList.remove('open');}
+async function ejecutarRepetir(){
+  const hastaStr=document.getElementById('repetir-hasta').value;
+  const sobrescribir=document.getElementById('repetir-sobrescribir').checked;
+  if(!hastaStr){showToast('Selecciona la fecha final');return;}
+  const origenKey=dateKey(currentDate);
+  if(hastaStr<=origenKey){showToast('La fecha final debe ser posterior al día actual');return;}
+
+  const origenRows=Object.values(programacion);
+  if(!origenRows.length){showToast('No hay programación este día para repetir');return;}
+
+  const fechas=[];
+  let d=new Date(currentDate); d.setDate(d.getDate()+1);
+  const hastaDate=new Date(hastaStr+'T00:00:00');
+  while(d<=hastaDate){ fechas.push(dateKey(d)); d.setDate(d.getDate()+1); }
+  if(!fechas.length){showToast('El rango no incluye ningún día');return;}
+
+  showToast('Repitiendo programación...');
+  const colabIds=origenRows.map(r=>r.colaborador_id);
+  let existSet=new Set();
+  if(!sobrescribir){
+    const{data:existentes,error:e1}=await sb.from('programacion').select('fecha,colaborador_id').in('fecha',fechas).in('colaborador_id',colabIds);
+    if(e1){showToast('Error: '+e1.message);return;}
+    existSet=new Set((existentes||[]).map(r=>r.fecha+'|'+r.colaborador_id));
+  }
+  const registros=[];
+  fechas.forEach(f=>{
+    origenRows.forEach(r=>{
+      if(!sobrescribir&&existSet.has(f+'|'+r.colaborador_id)) return;
+      registros.push({fecha:f,colaborador_id:r.colaborador_id,turno_id:r.turno_id,centro_costo_id:r.centro_costo_id,centro_costo_id2:r.centro_costo_id2,hora_entrada_custom:r.hora_entrada_custom,hora_salida_custom:r.hora_salida_custom,novedad:r.novedad});
+    });
+  });
+  if(!registros.length){showToast('Esos días ya tenían programación completa; nada para copiar');return;}
+
+  const{error:e2}=await sb.from('programacion').upsert(registros,{onConflict:'fecha,colaborador_id'});
+  if(e2){showToast('Error: '+e2.message);return;}
+  document.getElementById('modal-repetir').classList.remove('open');
+  showToast('✓ Programación repetida en '+fechas.length+' día(s)');
 }
 
 // ─── COMPARTIR PDF ───────────────────────────────────────────────────
