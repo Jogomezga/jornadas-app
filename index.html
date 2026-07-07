@@ -614,7 +614,8 @@ function selShiftFn(id){
 function renderCCList(n){
   const q=(document.getElementById(n===1?'cc-search':'cc-search2').value||'').toLowerCase();
   const excl=n===2?selCC:null;
-  const filtered=centros.filter(c=>(!excl||c.id!==excl)&&(c.codigo.toLowerCase().includes(q)||c.nombre.toLowerCase().includes(q))).slice(0,80);
+  const filtered=centros.filter(c=>(!excl||c.id!==excl)&&(c.codigo.toLowerCase().includes(q)||c.nombre.toLowerCase().includes(q)))
+    .sort((a,b)=>b.codigo.localeCompare(a.codigo,undefined,{numeric:true})).slice(0,80);
   const selId=n===1?selCC:selCC2;
   document.getElementById('cc-list-'+n).innerHTML=filtered.map(c=>`
     <div class="cc-item ${c.id===selId?'sel':''}" onclick="selCCFn(${n},${c.id})">
