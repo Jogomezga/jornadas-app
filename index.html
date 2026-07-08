@@ -1055,7 +1055,7 @@ async function generarPDFBlob(){
   const novedades=[];
 
   data.forEach(r=>{
-    const colab=colaboradores.find(c=>c.id===r.colaborador_id);
+    const colab=colaboradoresTodos.find(c=>c.id===r.colaborador_id);
     const doc_id=colab?.documento||'';
     // Si tiene novedad, separar
     if(r.novedad){
@@ -1185,7 +1185,7 @@ async function loadReport(){
   const grupos={};
   const novedades={vacaciones:[],incapacidad:[],permiso:[]};
   data.forEach(r=>{
-    const colab=colaboradores.find(c=>c.id===r.colaborador_id);
+    const colab=colaboradoresTodos.find(c=>c.id===r.colaborador_id);
     const nombre=colab?.nombre||'';
     if(r.novedad){
       if(novedades[r.novedad]) novedades[r.novedad].push(nombre);
