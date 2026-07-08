@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Jornadas App</title>
+<title>SAV INGENIERÍA SAS - Jornadas</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -21,7 +21,8 @@
   html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--gray-100); color: var(--gray-900); }
   .app { display: flex; flex-direction: column; height: 100vh; max-width: 480px; margin: 0 auto; background: white; }
   .header { background: var(--primary); color: white; padding: 16px; padding-top: max(16px, env(safe-area-inset-top)); flex-shrink: 0; }
-  .header-title { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+  .header-title { font-size: 17px; font-weight: 700; margin-bottom: 2px; letter-spacing: 0.3px; }
+  .header-sub { font-size: 12px; opacity: 0.85; margin-bottom: 6px; }
   .header-date { font-size: 13px; opacity: 0.8; margin-bottom: 12px; }
   .date-nav { display: flex; align-items: center; gap: 8px; }
   .date-nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 8px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -113,6 +114,11 @@
   .proj-toggle.on { background: var(--success); }
   .proj-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.2s; }
   .proj-toggle.on::after { transform: translateX(20px); }
+  .proj-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .icon-btn { width: 28px; height: 28px; border: none; border-radius: 8px; background: var(--gray-100); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .icon-btn:active { background: var(--gray-200); }
+  .icon-btn.danger { background: #FEE2E2; }
+  .icon-btn.danger:active { background: #FECACA; }
   .add-btn { width: 100%; padding: 13px; border: 1.5px dashed var(--primary); border-radius: var(--radius); font-size: 14px; font-weight: 600; color: var(--primary); background: white; cursor: pointer; margin-bottom: 12px; }
   .form-group { margin-bottom: 12px; }
   .form-label { font-size: 12px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; display: block; }
@@ -140,7 +146,8 @@
 <body>
 <div class="app">
   <div class="header">
-    <div class="header-title">📋 Jornadas</div>
+    <div class="header-title">SAV INGENIERÍA SAS</div>
+    <div class="header-sub">📋 Jornadas</div>
     <div class="header-date" id="header-date"></div>
     <div class="date-nav">
       <button class="date-nav-btn" onclick="changeDate(-1)">‹</button>
@@ -277,7 +284,7 @@
 <div class="modal-backdrop" id="modal-proyecto" onclick="closeProyectoOutside(event)">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Nuevo proyecto</div>
+    <div class="modal-title" id="modal-proyecto-title">Nuevo proyecto</div>
     <div class="modal-sub">Completa los datos del centro de costo</div>
     <div class="form-group">
       <label class="form-label">Código</label>
@@ -706,7 +713,11 @@ function renderProyectos(){
         <div class="proj-code">${c.codigo}</div>
         <div class="proj-name">${c.nombre}</div>
       </div>
-      <button class="proj-toggle ${c.activo?'on':''}" onclick="toggleProyecto(${c.id},${c.activo})"></button>
+      <div class="proj-actions">
+        <button class="icon-btn" onclick="abrirEditarProyecto(${c.id})" title="Editar">✏️</button>
+        <button class="icon-btn danger" onclick="eliminarProyecto(${c.id})" title="Eliminar">🗑️</button>
+        <button class="proj-toggle ${c.activo?'on':''}" onclick="toggleProyecto(${c.id},${c.activo})"></button>
+      </div>
     </div>`).join('');
 }
 async function toggleProyecto(id,activo){
@@ -718,9 +729,22 @@ async function toggleProyecto(id,activo){
   renderProyectos();
   showToast(activo?'Proyecto desactivado':'Proyecto activado');
 }
+let editandoProyectoId=null;
 function openNuevoProyecto(){
+  editandoProyectoId=null;
+  document.getElementById('modal-proyecto-title').textContent='Nuevo proyecto';
   document.getElementById('input-codigo').value='';
   document.getElementById('input-nombre').value='';
+  document.getElementById('modal-proyecto').classList.add('open');
+  setTimeout(()=>document.getElementById('input-codigo').focus(),300);
+}
+function abrirEditarProyecto(id){
+  const c=centrosTodos.find(x=>x.id===id);
+  if(!c)return;
+  editandoProyectoId=id;
+  document.getElementById('modal-proyecto-title').textContent='Editar proyecto';
+  document.getElementById('input-codigo').value=c.codigo;
+  document.getElementById('input-nombre').value=c.nombre;
   document.getElementById('modal-proyecto').classList.add('open');
   setTimeout(()=>document.getElementById('input-codigo').focus(),300);
 }
@@ -729,6 +753,20 @@ async function guardarProyecto(){
   const codigo=document.getElementById('input-codigo').value.trim();
   const nombre=document.getElementById('input-nombre').value.trim().toUpperCase();
   if(!codigo||!nombre){showToast('Completa código y nombre');return;}
+
+  if(editandoProyectoId){
+    const{data,error}=await sb.from('centros_costo').update({codigo,nombre}).eq('id',editandoProyectoId).select().single();
+    if(error){showToast('Error: '+error.message);return;}
+    const idx=centrosTodos.findIndex(c=>c.id===editandoProyectoId);
+    if(idx>=0)centrosTodos[idx]=data;
+    centrosTodos.sort((a,b)=>a.codigo.localeCompare(b.codigo));
+    centros=centrosTodos.filter(x=>x.activo);
+    document.getElementById('modal-proyecto').classList.remove('open');
+    renderProyectos();
+    showToast('✓ Proyecto '+codigo+' actualizado');
+    return;
+  }
+
   const{data,error}=await sb.from('centros_costo').insert({codigo,nombre,activo:true}).select().single();
   if(error){showToast('Error: '+error.message);return;}
   centrosTodos.push(data);
@@ -737,6 +775,24 @@ async function guardarProyecto(){
   document.getElementById('modal-proyecto').classList.remove('open');
   renderProyectos();
   showToast('✓ Proyecto '+codigo+' agregado');
+}
+async function eliminarProyecto(id){
+  const c=centrosTodos.find(x=>x.id===id);
+  if(!c)return;
+  if(!confirm('¿Eliminar el proyecto '+c.codigo+' - '+c.nombre+'? Esto no se puede deshacer.'))return;
+  const{error}=await sb.from('centros_costo').delete().eq('id',id);
+  if(error){
+    if(error.message.includes('foreign key')||error.code==='23503'){
+      showToast('No se puede eliminar: ya tiene programación asociada. Desactívalo en su lugar.');
+    }else{
+      showToast('Error: '+error.message);
+    }
+    return;
+  }
+  centrosTodos=centrosTodos.filter(x=>x.id!==id);
+  centros=centrosTodos.filter(x=>x.activo);
+  renderProyectos();
+  showToast('✓ Proyecto '+c.codigo+' eliminado');
 }
 
 // ─── EQUIPO ──────────────────────────────────────────────────────────
@@ -1023,10 +1079,12 @@ async function generarPDFBlob(){
 
   // Encabezado
   doc.setFillColor(67,56,202); doc.rect(0,0,W,28,'F');
-  doc.setTextColor(255,255,255); doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text('Programacion de Jornadas',margin,12);
+  doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('SAV INGENIERÍA SAS',margin,7);
+  doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text('Programacion de Jornadas',margin,15);
   doc.setFontSize(11); doc.setFont('helvetica','normal');
-  doc.text(DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()]+' '+currentDate.getFullYear(),margin,21);
+  doc.text(DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()]+' '+currentDate.getFullYear(),margin,23);
   doc.setTextColor(0,0,0); y=36;
 
   // Proyectos
