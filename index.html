@@ -1,52 +1,1273 @@
--- ATENCION: esto borra TODA la programacion y los colaboradores existentes
--- y los reemplaza por la lista nueva. Es irreversible.
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SAV INGENIERÍA SAS - Jornadas</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --primary: #4338CA; --primary-light: #EEF2FF; --primary-dark: #3730A3;
+    --success: #059669; --success-light: #D1FAE5;
+    --warning: #D97706; --warning-light: #FEF3C7;
+    --danger: #DC2626; --danger-light: #FEE2E2;
+    --gray-100: #F3F4F6; --gray-200: #E5E7EB; --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF; --gray-500: #6B7280; --gray-700: #374151; --gray-900: #111827;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--gray-100); color: var(--gray-900); }
+  .app { display: flex; flex-direction: column; height: 100vh; max-width: 480px; margin: 0 auto; background: white; }
+  .header { background: var(--primary); color: white; padding: 16px; padding-top: max(16px, env(safe-area-inset-top)); flex-shrink: 0; }
+  .header-title { font-size: 17px; font-weight: 700; margin-bottom: 2px; letter-spacing: 0.3px; }
+  .header-sub { font-size: 12px; opacity: 0.85; margin-bottom: 6px; }
+  .header-date { font-size: 13px; opacity: 0.8; margin-bottom: 12px; }
+  .date-nav { display: flex; align-items: center; gap: 8px; }
+  .date-nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 8px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .date-label { font-size: 15px; font-weight: 600; flex: 1; text-align: center; }
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .stat { background: rgba(255,255,255,0.15); border-radius: var(--radius-sm); padding: 8px 12px; }
+  .stat-val { font-size: 20px; font-weight: 700; }
+  .stat-lbl { font-size: 11px; opacity: 0.8; margin-top: 1px; }
+  .tabs { display: flex; border-bottom: 1px solid var(--gray-200); flex-shrink: 0; background: white; }
+  .tab { flex: 1; padding: 8px 4px; text-align: center; font-size: 11px; color: var(--gray-500); cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .tab-icon { font-size: 16px; display: block; margin-bottom: 2px; }
+  .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .view { display: none; padding: 12px; }
+  .view.active { display: block; }
+  .collab-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; cursor: pointer; }
+  .collab-card.assigned { border-left: 3px solid var(--success); }
+  .collab-card.pending { border-left: 3px solid var(--gray-300); }
+  .card-top { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .card-info { flex: 1; min-width: 0; }
+  .card-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-cc { font-size: 12px; color: var(--gray-500); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-doc { font-size: 10.5px; color: var(--gray-400); margin-top: 1px; }
+  .badge { font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 20px; flex-shrink: 0; }
+  .badge-ok { background: var(--success-light); color: var(--success); }
+  .badge-pending { background: var(--warning-light); color: var(--warning); }
+  .shift-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; background: var(--primary-light); color: var(--primary); padding: 3px 8px; border-radius: 20px; margin-top: 6px; font-weight: 500; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: flex-end; justify-content: center; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: white; border-radius: 20px 20px 0 0; padding: 20px; padding-bottom: max(20px, env(safe-area-inset-bottom)); width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+  .modal-handle { width: 40px; height: 4px; background: var(--gray-300); border-radius: 2px; margin: 0 auto 16px; }
+  .modal-title { font-size: 17px; font-weight: 700; }
+  .modal-sub { font-size: 13px; color: var(--gray-500); margin-top: 2px; margin-bottom: 16px; }
+  .section-title { font-size: 11px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; margin: 14px 0 8px; }
+  .shift-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+  .shift-opt { border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); padding: 10px 6px; text-align: center; cursor: pointer; }
+  .shift-opt.sel { border-color: var(--primary); background: var(--primary-light); }
+  .shift-opt-name { font-size: 13px; font-weight: 600; color: var(--gray-700); }
+  .shift-opt.sel .shift-opt-name { color: var(--primary); }
+  .shift-opt-time { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+  .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+  .time-group { display: flex; flex-direction: column; gap: 4px; }
+  .time-label { font-size: 11px; color: var(--gray-500); font-weight: 500; }
+  .time-input { padding: 9px 10px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; color: var(--gray-900); background: white; width: 100%; outline: none; }
+  .time-input:focus { border-color: var(--primary); }
+  .time-hint { font-size: 11px; color: var(--primary); background: var(--primary-light); padding: 6px 10px; border-radius: var(--radius-sm); margin-top: 6px; }
+  .search-input { width: 100%; padding: 10px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; color: var(--gray-900); background: #F9FAFB; outline: none; margin-bottom: 8px; }
+  .search-input:focus { border-color: var(--primary); background: white; }
+  .cc-list { max-height: 180px; overflow-y: auto; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); }
+  .cc-item { padding: 10px 12px; font-size: 13px; color: var(--gray-700); cursor: pointer; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; gap: 8px; }
+  .cc-item:last-child { border-bottom: none; }
+  .cc-item.sel { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+  .cc-code { font-size: 11px; color: var(--gray-400); font-family: monospace; min-width: 34px; }
+  .cc-item.sel .cc-code { color: var(--primary); opacity: 0.7; }
+  .split-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--gray-100); margin-top: 8px; }
+  .split-label { font-size: 14px; font-weight: 500; color: var(--gray-700); }
+  .split-sub { font-size: 12px; color: var(--gray-400); margin-top: 1px; }
+  .toggle { position: relative; width: 44px; height: 24px; background: var(--gray-300); border-radius: 12px; cursor: pointer; transition: background 0.2s; flex-shrink: 0; border: none; }
+  .toggle.on { background: var(--primary); }
+  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.2s; }
+  .toggle.on::after { transform: translateX(20px); }
+  .btn { width: 100%; padding: 14px; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 14px; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-danger { background: var(--danger-light); color: var(--danger); margin-top: 8px; }
+  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .month-btn { background: var(--gray-100); border: none; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; color: var(--gray-700); font-weight: 500; }
+  .month-label { font-size: 15px; font-weight: 700; }
+  .export-btn { width: 100%; padding: 12px; border: 1.5px solid var(--primary); border-radius: var(--radius); font-size: 14px; font-weight: 600; color: var(--primary); background: white; cursor: pointer; margin-top: 8px; }
+  .pdf-btn { width: 100%; padding: 12px; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; color: white; background: var(--success); cursor: pointer; margin-top: 8px; }
+  .report-card { background: #F9FAFB; border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
+  .report-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--gray-200); }
+  .report-row:last-child { border-bottom: none; }
+  .report-cc { font-size: 13px; color: var(--gray-700); flex: 1; min-width: 0; margin-right: 8px; }
+  .report-code { font-size: 11px; color: var(--gray-400); font-family: monospace; }
+  .report-hrs { font-size: 14px; font-weight: 700; color: var(--primary); flex-shrink: 0; }
+  .progress { height: 3px; background: var(--gray-200); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--primary); border-radius: 2px; }
+  .proj-search { width: 100%; padding: 10px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; background: #F9FAFB; outline: none; margin-bottom: 10px; }
+  .proj-search:focus { border-color: var(--primary); background: white; }
+  .proj-filter { display: flex; gap: 6px; margin-bottom: 10px; }
+  .filter-btn { flex: 1; padding: 7px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; cursor: pointer; background: white; color: var(--gray-600); text-align: center; }
+  .filter-btn.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+  .proj-card { display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid var(--gray-200); border-radius: var(--radius); margin-bottom: 8px; }
+  .proj-card.inactive { opacity: 0.5; }
+  .proj-info { flex: 1; min-width: 0; margin-right: 10px; }
+  .proj-code { font-size: 11px; font-weight: 600; color: var(--primary); font-family: monospace; }
+  .proj-name { font-size: 13px; color: var(--gray-700); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .proj-toggle { position: relative; width: 44px; height: 24px; background: var(--gray-300); border-radius: 12px; cursor: pointer; transition: background 0.2s; flex-shrink: 0; border: none; }
+  .proj-toggle.on { background: var(--success); }
+  .proj-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.2s; }
+  .proj-toggle.on::after { transform: translateX(20px); }
+  .proj-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .icon-btn { width: 28px; height: 28px; border: none; border-radius: 8px; background: var(--gray-100); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .icon-btn:active { background: var(--gray-200); }
+  .icon-btn.danger { background: #FEE2E2; }
+  .icon-btn.danger:active { background: #FECACA; }
+  .add-btn { width: 100%; padding: 13px; border: 1.5px dashed var(--primary); border-radius: var(--radius); font-size: 14px; font-weight: 600; color: var(--primary); background: white; cursor: pointer; margin-bottom: 12px; }
+  .form-group { margin-bottom: 12px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; display: block; }
+  .form-input { width: 100%; padding: 11px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; color: var(--gray-900); background: white; outline: none; }
+  .form-input:focus { border-color: var(--primary); }
+  .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; gap: 12px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-box { margin: 16px; padding: 16px; background: var(--danger-light); border-radius: var(--radius); }
+  .error-title { font-size: 14px; font-weight: 600; color: var(--danger); margin-bottom: 6px; }
+  .error-msg { font-size: 12px; color: #7F1D1D; line-height: 1.5; word-break: break-all; }
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--gray-900); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 200; white-space: nowrap; max-width: 90vw; text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .empty { text-align: center; padding: 40px 24px; color: var(--gray-400); font-size: 14px; }
+  .novedad-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 4px; }
+  .novedad-opt { border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); padding: 14px 6px; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .novedad-opt:active { border-color: var(--warning); }
+  .novedad-opt.sel { border-color: var(--warning); background: var(--warning-light); }
+  .novedad-icon { font-size: 24px; margin-bottom: 4px; }
+  .novedad-name { font-size: 12px; font-weight: 600; color: var(--gray-700); }
+  .novedad-opt.sel .novedad-name { color: var(--warning); }
+  .badge-novedad { background: #FEF3C7; color: #92400E; } .av1{background:#D1FAE5;color:#065F46} .av2{background:#FEF3C7;color:#92400E} .av3{background:#FCE7F3;color:#9D174D} .av4{background:#E0F2FE;color:#0C4A6E} .av5{background:#F0FDF4;color:#14532D}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-title">SAV INGENIERÍA SAS</div>
+    <div class="header-sub">📋 Jornadas</div>
+    <div class="header-date" id="header-date"></div>
+    <div class="date-nav">
+      <button class="date-nav-btn" onclick="changeDate(-1)">‹</button>
+      <div class="date-label" id="date-label"></div>
+      <button class="date-nav-btn" onclick="changeDate(1)">›</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-val" id="stat-prog">—</div><div class="stat-lbl">Programados hoy</div></div>
+      <div class="stat"><div class="stat-val" id="stat-cc">—</div><div class="stat-lbl">Centros activos</div></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('prog')"><span class="tab-icon">📅</span>Programar</div>
+    <div class="tab" onclick="switchTab('report')"><span class="tab-icon">📊</span>Reporte</div>
+    <div class="tab" onclick="switchTab('proyectos')"><span class="tab-icon">🏗️</span>Proyectos</div>
+    <div class="tab" onclick="switchTab('equipo')"><span class="tab-icon">👥</span>Equipo</div>
+  </div>
+  <div class="content">
+    <div class="view active" id="view-prog">
+      <button class="pdf-btn" style="background:#0891B2;margin-bottom:10px" onclick="abrirRepetir()">📋 Repetir programación del día anterior</button>
+      <div id="collab-list"><div class="loading"><div class="spinner"></div><div style="font-size:13px;color:#6B7280">Cargando...</div></div></div>
+    </div>
+    <div class="view" id="view-report">
+      <div class="month-nav">
+        <button class="month-btn" onclick="changeDate(-1);loadReport()">‹ Anterior</button>
+        <div class="month-label" id="month-label"></div>
+        <button class="month-btn" onclick="changeDate(1);loadReport()">Siguiente ›</button>
+      </div>
+      <button class="pdf-btn" onclick="exportPDFDia()">📄 PDF programación del día</button>
+      <button class="pdf-btn" style="background:#2563EB" onclick="openExcelRango()">📊 Exportar Excel (rango de fechas)</button>
+      <button class="pdf-btn" style="background:#7C3AED" onclick="openFIC()">🧮 Reporte FIC (personas por proyecto)</button>
+      <div id="report-content" style="margin-top:12px"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+    <div class="view" id="view-proyectos">
+      <button class="add-btn" onclick="openNuevoProyecto()">＋ Agregar nuevo proyecto</button>
+      <input class="proj-search" id="proj-search" placeholder="🔍 Buscar por código o nombre..." oninput="renderProyectos()">
+      <div class="proj-filter">
+        <button class="filter-btn active" id="filter-todos" onclick="setFilter('todos')">Todos</button>
+        <button class="filter-btn" id="filter-activos" onclick="setFilter('activos')">Activos</button>
+        <button class="filter-btn" id="filter-inactivos" onclick="setFilter('inactivos')">Inactivos</button>
+      </div>
+      <div id="proj-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+    <div class="view" id="view-equipo">
+      <button class="add-btn" onclick="openNuevoColaborador()">＋ Agregar nuevo colaborador</button>
+      <input class="proj-search" id="equipo-search" placeholder="🔍 Buscar por nombre..." oninput="renderEquipo()">
+      <div class="proj-filter">
+        <button class="filter-btn active" id="efilter-todos" onclick="setEFilter('todos')">Todos</button>
+        <button class="filter-btn" id="efilter-activos" onclick="setEFilter('activos')">Activos</button>
+        <button class="filter-btn" id="efilter-inactivos" onclick="setEFilter('inactivos')">Inactivos</button>
+      </div>
+      <div id="equipo-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+</div>
 
-DELETE FROM programacion;
-DELETE FROM colaboradores;
-ALTER SEQUENCE colaboradores_id_seq RESTART WITH 1;
+<!-- MODAL ASIGNACIÓN -->
+<div class="modal-backdrop" id="modal" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-name"></div>
+    <div class="modal-sub" id="modal-date-sub"></div>
 
-INSERT INTO colaboradores (nombre, documento, activo) VALUES
-  ('ANGEL GUSTAVO ARAUJO','6.574.483',true),
-  ('BRAHIAN STIVEN FRANCO PEREZ','1.001.362.851',true),
-  ('CARLOS ANDRES CASTAÑEDA GARCIA','98.695.556',true),
-  ('CARLOS ANTONIO TABORDA HOLGUIN','98.772.020',true),
-  ('CARLOS MARIO CIRO HERNANDEZ','1.128.395.960',true),
-  ('DANIEL ALEJANDRO BARRERA CEBAL','1.214.725.725',true),
-  ('DAVID ALEJANDRO CELIS GARCIA','1.053.803.523',true),
-  ('DAVID MAURICIO GONZALEZ TORRES','71.383.245',true),
-  ('DAYLLER JAVIER VARELA SUAREZ','71.278.074',true),
-  ('DEIMER ALEXIS JIMENEZ DAVID','1.061.809.485',true),
-  ('DIEGO ALEJANDRO SANCHEZ VARGAS','1.193.550.690',true),
-  ('EDWIN ARMANDO LOPEZ MUÑOZ','71.274.968',true),
-  ('EDYS CECILIA LOPEZ TUBERQUIA','43.746.857',true),
-  ('ELIECER JESUS VEGA MARTINEZ','1.007.344.921',true),
-  ('ELKIN ALEICE TANGARIFE CASTAÑE','98.491.341',true),
-  ('ENAYS DAVID PADILLA CASTILLO','1.038.135.847',true),
-  ('FRANKLIN ESTEVEN NARVAEZ CASTR','1.022.430.233',true),
-  ('IVAN ENRIQUE FLOREZ PEDROZA','1.051.818.825',true),
-  ('JEFERSON MATEO AGUIRRE VELEZ','1.023.624.669',true),
-  ('JEFFERSON ESTIWART COLONIA CRU','1.035.875.885',true),
-  ('JHAN CARLOS HERRERA PAREJA','1.051.825.895',true),
-  ('JHONATAN LOAIZA MENESES','1.017.241.911',true),
-  ('JORGE ALEXANDER VALENCIA VANEG','98.529.889',true),
-  ('JUAN PABLO LONDOÑO VASQUEZ','1.007.320.147',true),
-  ('JUAN PABLO MONSALVE GOMEZ','1.000.756.890',true),
-  ('JULIO HERNAN BOTERO GUTIERREZ','71.141.486',true),
-  ('JUVER ARNEY TUBERQUIA','1.017.134.562',true),
-  ('KAROLL DAYANNA BABILONIA BOLAÑ','1.000.785.196',true),
-  ('LUIS ALFONSO AMOROCHO PINTO','5.824.420',true),
-  ('LUIS DANIEL CARTAGENA VARGAS','1.152.452.004',true),
-  ('LUIS FERNANDO CORREA PALACIO','98.581.156',true),
-  ('MAICOL DANIEL HERNANDEZ TORRES','1.037.647.117',true),
-  ('MAYKLER PRENS CASTAÑEDA','71.271.484',true),
-  ('MICHAEL  STEVE YARA MORENO','1.026.280.272',true),
-  ('MISAEL TREJOS HIGUITA','1.028.027.214',true),
-  ('OCTAVIO JOSE FLOREZ PEDROZA','1.051.815.215',true),
-  ('OSCAR DARIO MUÑOZ TUBERQUIA','1.025.881.622',true),
-  ('REOVIS SALET RODRIGUEZ ANGULO','78.111.747',true),
-  ('SANTIAGO QUINTERO BETANCUR','1.000.759.927',true),
-  ('SEBASTIAN MUÑOZ VARELA','1.042.707.005',true),
-  ('SERGIO ERNESTO NIEVES PEREZ','80.179.786',true),
-  ('YEISON STIDUAR PALACIO PEREZ','1.214.714.544',true),
-  ('YRMIS GERSON CAMACHO PIÑA','1.247.789',true),
-  ('YUANY RODRIGO AGUIRRE URREGO','98.711.248',true);
+    <!-- Selector tipo: Proyecto o Novedad -->
+    <div class="section-title">Tipo de asignación</div>
+    <div class="shift-grid" style="grid-template-columns:1fr 1fr;margin-bottom:4px">
+      <div class="shift-opt sel" id="tipo-proyecto" onclick="setTipo('proyecto')">
+        <div class="shift-opt-name">🏗️ Proyecto</div>
+        <div class="shift-opt-time">Asignar a obra</div>
+      </div>
+      <div class="shift-opt" id="tipo-novedad" onclick="setTipo('novedad')">
+        <div class="shift-opt-name">📋 Novedad</div>
+        <div class="shift-opt-time">Ausencia</div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN PROYECTO -->
+    <div id="seccion-proyecto">
+      <div class="section-title">Turno</div>
+      <div class="shift-grid" id="shift-grid"></div>
+      <div id="horario-section" style="display:none">
+        <div class="section-title">Horario</div>
+        <div class="time-hint" id="time-hint"></div>
+        <div class="time-row" style="margin-top:8px">
+          <div class="time-group">
+            <span class="time-label">Entrada</span>
+            <input class="time-input" type="time" id="input-entrada" onchange="recalcHint()">
+          </div>
+          <div class="time-group">
+            <span class="time-label">Salida</span>
+            <input class="time-input" type="time" id="input-salida" onchange="recalcHint()">
+          </div>
+        </div>
+      </div>
+      <div class="section-title">Centro de costo principal</div>
+      <input class="search-input" id="cc-search" placeholder="🔍 Buscar por código o nombre..." oninput="renderCCList(1)">
+      <div class="cc-list" id="cc-list-1"></div>
+      <div class="split-row">
+        <div><div class="split-label">Jornada partida</div><div class="split-sub">Asignar segundo centro de costo</div></div>
+        <button class="toggle" id="split-toggle" onclick="toggleSplit()"></button>
+      </div>
+      <div id="cc2-section" style="display:none">
+        <div class="section-title">Segundo centro de costo</div>
+        <input class="search-input" id="cc-search2" placeholder="🔍 Buscar segundo centro..." oninput="renderCCList(2)">
+        <div class="cc-list" id="cc-list-2"></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN NOVEDAD -->
+    <div id="seccion-novedad" style="display:none">
+      <div class="section-title">Categoría de ausencia</div>
+      <div class="novedad-grid">
+        <div class="novedad-opt" id="nov-vacaciones" onclick="selNovedad('vacaciones')">
+          <div class="novedad-icon">🏖️</div>
+          <div class="novedad-name">Vacaciones</div>
+        </div>
+        <div class="novedad-opt" id="nov-incapacidad" onclick="selNovedad('incapacidad')">
+          <div class="novedad-icon">🏥</div>
+          <div class="novedad-name">Incapacidad</div>
+        </div>
+        <div class="novedad-opt" id="nov-permiso" onclick="selNovedad('permiso')">
+          <div class="novedad-icon">📝</div>
+          <div class="novedad-name">Permiso</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" onclick="saveAssignment()">✓ Guardar programación</button>
+    <button class="btn btn-danger" id="btn-clear" onclick="clearAssignment()" style="display:none">✕ Quitar asignación</button>
+  </div>
+</div>
+
+<!-- MODAL NUEVO PROYECTO -->
+<div class="modal-backdrop" id="modal-proyecto" onclick="closeProyectoOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-proyecto-title">Nuevo proyecto</div>
+    <div class="modal-sub">Completa los datos del centro de costo</div>
+    <div class="form-group">
+      <label class="form-label">Código</label>
+      <input class="form-input" id="input-codigo" placeholder="Ej: 921" type="text">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nombre del proyecto</label>
+      <input class="form-input" id="input-nombre" placeholder="Ej: SMART FIT LAURELES MDE" type="text">
+    </div>
+    <button class="btn btn-primary" onclick="guardarProyecto()">✓ Guardar proyecto</button>
+  </div>
+</div>
+
+<!-- MODAL NUEVO COLABORADOR -->
+<div class="modal-backdrop" id="modal-colaborador" onclick="closeColaboradorOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nuevo colaborador</div>
+    <div class="modal-sub">Ingresa el nombre completo</div>
+    <div class="form-group">
+      <label class="form-label">Nombre completo</label>
+      <input class="form-input" id="input-colab-nombre" placeholder="Ej: Juan Pérez Gómez" type="text">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Número de documento</label>
+      <input class="form-input" id="input-colab-documento" placeholder="Ej: 71.234.567-8" type="text">
+    </div>
+    <button class="btn btn-primary" onclick="guardarColaborador()">✓ Guardar colaborador</button>
+  </div>
+</div>
+
+<!-- MODAL EXCEL RANGO DE FECHAS -->
+<div class="modal-backdrop" id="modal-excel-rango" onclick="closeExcelRangoOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Exportar Excel</div>
+    <div class="modal-sub">Selecciona el rango de fechas a incluir</div>
+    <div class="form-group">
+      <label class="form-label">Desde</label>
+      <input class="form-input" id="excel-desde" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hasta</label>
+      <input class="form-input" id="excel-hasta" type="date">
+    </div>
+    <button class="btn btn-primary" onclick="generarExcelRango()">✓ Generar Excel</button>
+  </div>
+</div>
+
+<!-- MODAL REPORTE FIC -->
+<div class="modal-backdrop" id="modal-fic" onclick="closeFICOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Reporte FIC</div>
+    <div class="modal-sub">Colaboradores distintos por proyecto en el rango seleccionado</div>
+    <div class="form-group">
+      <label class="form-label">Desde</label>
+      <input class="form-input" id="fic-desde" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Hasta</label>
+      <input class="form-input" id="fic-hasta" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Centro de costos</label>
+      <select class="form-input" id="fic-centro"></select>
+    </div>
+    <button class="btn btn-primary" onclick="generarFIC()">✓ Generar reporte FIC</button>
+  </div>
+</div>
+
+<!-- MODAL REPETIR PROGRAMACIÓN -->
+<div class="modal-backdrop" id="modal-repetir" onclick="closeRepetirOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Repetir programación</div>
+    <div class="modal-sub" id="repetir-sub">Copiará la programación del día anterior hacia este día</div>
+    <div class="form-group" style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="repetir-sobrescribir" style="width:18px;height:18px">
+      <label class="form-label" style="margin:0" for="repetir-sobrescribir">Sobrescribir si ya hay algo asignado hoy</label>
+    </div>
+    <button class="btn btn-primary" onclick="ejecutarRepetir()">✓ Repetir programación</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://nlmdzeguypchouqsdyzx.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sbWR6ZWd1eXBjaG91cXNkeXp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4OTMwODksImV4cCI6MjA5NzQ2OTA4OX0.vN9nOwldbRO_me2LlRR95rvD5IV10C7EOPpT3GC6zxM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let colaboradores=[], colaboradoresTodos=[], centros=[], centrosTodos=[], turnos=[], programacion={};
+let currentDate=new Date(), currentMonth=new Date();
+let currentColabIdx=null, splitOn=false, selShift=null, selCC=null, selCC2=null;
+let tipoAsignacion='proyecto', selNovedad_val=null;
+let proyFilter='todos', colabFilter='todos';
+const AVC=['av0','av1','av2','av3','av4','av5'];
+const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const DAYS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const DAYS_S=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+// Horario Normal según día de semana
+// 0=Dom,1=Lun,2=Mar,3=Mié,4=Jue,5=Vie,6=Sáb
+function horarioNormal(fecha){
+  const dia=fecha.getDay();
+  if(dia===5) return {entrada:'07:00', salida:'15:00', label:'Viernes: 7:00 - 15:00'};
+  if(dia===6) return {entrada:'07:00', salida:'11:00', label:'Sábado: 7:00 - 11:00'};
+  if(dia===0) return {entrada:'07:00', salida:'16:00', label:'Domingo: 7:00 - 16:00'};
+  return {entrada:'07:00', salida:'16:00', label:'Lun-Jue: 7:00 - 16:00'};
+}
+
+function getTurnoNormal(){ return turnos.find(t=>t.nombre==='Normal'); }
+function getTurnoNocturno(){ return turnos.find(t=>t.nombre==='Nocturno'); }
+function isNormal(id){ const t=getTurnoNormal(); return t&&t.id===id; }
+function isNocturno(id){ const t=getTurnoNocturno(); return t&&t.id===id; }
+function isEditable(id){ return isNormal(id)||isNocturno(id); }
+
+async function init(){
+  updateDateLabels();
+  try{
+    const [{data:c,error:e1},{data:cc,error:e2},{data:t,error:e3}]=await Promise.all([
+      sb.from('colaboradores').select('id,nombre,activo,documento').order('nombre'),
+      sb.from('centros_costo').select('id,codigo,nombre,activo').order('codigo'),
+      sb.from('turnos').select('*').eq('activo',true).order('id')
+    ]);
+    if(e1) throw new Error('colaboradores: '+e1.message);
+    if(e2) throw new Error('centros_costo: '+e2.message);
+    if(e3) throw new Error('turnos: '+e3.message);
+    colaboradoresTodos=c||[]; colaboradores=colaboradoresTodos.filter(x=>x.activo); centrosTodos=cc||[]; centros=centrosTodos.filter(x=>x.activo);
+    const order={'Normal':0,'Nocturno':1};
+    turnos=(t||[]).sort((a,b)=>(order[a.nombre]??9)-(order[b.nombre]??9));
+    if(!colaboradores.length){showError('No se encontraron colaboradores.');return;}
+    await loadProgramacion();
+  }catch(err){showError(err.message);}
+}
+
+function showError(msg){
+  document.getElementById('collab-list').innerHTML=`<div class="error-box"><div class="error-title">⚠️ Error</div><div class="error-msg">${msg}</div></div>`;
+}
+
+function dateKey(d){return d.toISOString().slice(0,10);}
+
+function updateDateLabels(){
+  const d=currentDate;
+  document.getElementById('date-label').textContent=DAYS_S[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()].slice(0,3);
+  document.getElementById('header-date').textContent=DAYS[d.getDay()]+', '+d.getDate()+' de '+MONTHS[d.getMonth()]+' '+d.getFullYear();
+}
+
+async function loadProgramacion(){
+  document.getElementById('collab-list').innerHTML='<div class="loading"><div class="spinner"></div><div style="font-size:13px;color:#6B7280">Cargando...</div></div>';
+  const key=dateKey(currentDate);
+  const{data,error}=await sb.from('programacion').select('*').eq('fecha',key);
+  if(error){showError('programacion: '+error.message);return;}
+  programacion={};
+  (data||[]).forEach(r=>{programacion[r.colaborador_id]=r;});
+  renderCollabs();
+}
+
+function getHorarioReal(asn){
+  if(!asn) return '';
+  if(asn.hora_entrada_custom && asn.hora_salida_custom)
+    return asn.hora_entrada_custom.slice(0,5)+' – '+asn.hora_salida_custom.slice(0,5);
+  const turno=turnos.find(t=>t.id===asn.turno_id);
+  if(!turno) return '';
+  if(turno.nombre==='Normal'){
+    const h=horarioNormal(currentDate);
+    return h.entrada+' – '+h.salida;
+  }
+  return turno.hora_entrada.slice(0,5)+' – '+turno.hora_salida.slice(0,5);
+}
+
+const NOVEDAD_LABEL={'vacaciones':'🏖️ Vacaciones','incapacidad':'🏥 Incapacidad','permiso':'📝 Permiso'};
+
+function renderCollabs(){
+  const prog=Object.keys(programacion).length;
+  const ccs=new Set(Object.values(programacion).flatMap(r=>[r.centro_costo_id,r.centro_costo_id2].filter(Boolean)));
+  document.getElementById('stat-prog').textContent=prog+' / '+colaboradores.length;
+  document.getElementById('stat-cc').textContent=ccs.size;
+  document.getElementById('collab-list').innerHTML=colaboradores.map((c,i)=>{
+    const asn=programacion[c.id];
+    const av=c.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    let ccLabel, badge, shiftTag='';
+    if(asn&&asn.novedad){
+      ccLabel=NOVEDAD_LABEL[asn.novedad]||asn.novedad;
+      badge='<span class="badge badge-novedad">'+ccLabel+'</span>';
+    } else if(asn){
+      const cc=centrosTodos.find(x=>x.id===asn.centro_costo_id);
+      const cc2=asn.centro_costo_id2?centrosTodos.find(x=>x.id===asn.centro_costo_id2):null;
+      const turno=turnos.find(x=>x.id===asn.turno_id);
+      ccLabel=cc?cc.codigo+' · '+cc.nombre.slice(0,28):'Sin asignar';
+      badge='<span class="badge badge-ok">✓ Listo</span>';
+      const horario=getHorarioReal(asn);
+      shiftTag=turno?`<div class="shift-tag">⏰ ${turno.nombre} ${horario}${cc2?' · '+cc2.codigo:''}</div>`:'';
+    } else {
+      ccLabel='Sin asignar';
+      badge='<span class="badge badge-pending">Pendiente</span>';
+    }
+    return `<div class="collab-card ${asn?'assigned':'pending'}" onclick="openModal(${i})">
+      <div class="card-top">
+        <div class="avatar ${AVC[i%6]}">${av}</div>
+        <div class="card-info"><div class="card-name">${c.nombre}</div><div class="card-doc">CC ${c.documento||'—'}</div><div class="card-cc">${ccLabel}</div></div>
+        ${badge}
+      </div>${shiftTag}</div>`;
+  }).join('');
+}
+
+function changeDate(d){currentDate.setDate(currentDate.getDate()+d);updateDateLabels();loadProgramacion();}
+
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['prog','report','proyectos','equipo'][i]===t));
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+t).classList.add('active');
+  if(t==='report') loadReport();
+  if(t==='proyectos') renderProyectos();
+  if(t==='equipo') renderEquipo();
+}
+
+// ─── MODAL ASIGNACIÓN ───────────────────────────────────────────────
+function openModal(idx){
+  currentColabIdx=idx;
+  const c=colaboradores[idx];
+  const asn=programacion[c.id];
+  tipoAsignacion=asn&&asn.novedad?'novedad':'proyecto';
+  selNovedad_val=asn?.novedad||null;
+  selShift=asn?asn.turno_id:(getTurnoNormal()?.id||turnos[0]?.id||null);
+  selCC=asn?asn.centro_costo_id:null;
+  selCC2=asn?asn.centro_costo_id2:null;
+  splitOn=!!(asn&&asn.centro_costo_id2);
+  document.getElementById('modal-name').textContent=c.nombre;
+  document.getElementById('modal-date-sub').textContent=DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()];
+  document.getElementById('cc-search').value='';
+  document.getElementById('cc-search2').value='';
+  document.getElementById('cc2-section').style.display=splitOn?'block':'none';
+  document.getElementById('btn-clear').style.display=asn?'block':'none';
+  document.getElementById('split-toggle').classList.toggle('on',splitOn);
+  if(asn&&asn.hora_entrada_custom){
+    document.getElementById('input-entrada').value=asn.hora_entrada_custom.slice(0,5);
+    document.getElementById('input-salida').value=asn.hora_salida_custom.slice(0,5);
+  } else if(isNocturno(selShift)){
+    const t=getTurnoNocturno();
+    document.getElementById('input-entrada').value=t?t.hora_entrada.slice(0,5):'21:00';
+    document.getElementById('input-salida').value=t?t.hora_salida.slice(0,5):'06:00';
+  } else {
+    const h=horarioNormal(currentDate);
+    document.getElementById('input-entrada').value=h.entrada;
+    document.getElementById('input-salida').value=h.salida;
+  }
+  setTipo(tipoAsignacion);
+  renderShifts();
+  updateHorarioSection();
+  renderCCList(1);renderCCList(2);
+  document.getElementById('modal').classList.add('open');
+}
+
+function setTipo(tipo){
+  tipoAsignacion=tipo;
+  document.getElementById('tipo-proyecto').classList.toggle('sel',tipo==='proyecto');
+  document.getElementById('tipo-novedad').classList.toggle('sel',tipo==='novedad');
+  document.getElementById('seccion-proyecto').style.display=tipo==='proyecto'?'block':'none';
+  document.getElementById('seccion-novedad').style.display=tipo==='novedad'?'block':'none';
+  if(tipo==='novedad') renderNovedadOpts();
+}
+
+function selNovedad(val){
+  selNovedad_val=val;
+  renderNovedadOpts();
+}
+
+function renderNovedadOpts(){
+  ['vacaciones','incapacidad','permiso'].forEach(n=>{
+    document.getElementById('nov-'+n).classList.toggle('sel',selNovedad_val===n);
+  });
+}
+
+function updateHorarioSection(){
+  const show=isEditable(selShift);
+  document.getElementById('horario-section').style.display=show?'block':'none';
+  if(show) recalcHint();
+}
+
+function recalcHint(){
+  let defaultEntrada, defaultSalida, label;
+  if(isNormal(selShift)){
+    const h=horarioNormal(currentDate);
+    defaultEntrada=h.entrada; defaultSalida=h.salida; label=h.label;
+  } else {
+    const t=getTurnoNocturno();
+    defaultEntrada=t?t.hora_entrada.slice(0,5):'21:00';
+    defaultSalida=t?t.hora_salida.slice(0,5):'06:00';
+    label='Nocturno: '+defaultEntrada+' - '+defaultSalida;
+  }
+  const entrada=document.getElementById('input-entrada').value;
+  const salida=document.getElementById('input-salida').value;
+  const esDefault=entrada===defaultEntrada&&salida===defaultSalida;
+  document.getElementById('time-hint').textContent=esDefault
+    ? '⏰ Horario por defecto: '+label
+    : '✏️ Horario modificado para este colaborador';
+}
+
+function closeModalOutside(e){if(e.target===document.getElementById('modal'))closeModal();}
+function closeModal(){document.getElementById('modal').classList.remove('open');}
+
+function renderShifts(){
+  document.getElementById('shift-grid').innerHTML=turnos.map(t=>{
+    let timeLabel='';
+    if(t.nombre==='Normal'){
+      const h=horarioNormal(currentDate);
+      timeLabel=h.entrada+' – '+h.salida;
+    } else {
+      timeLabel=t.hora_entrada.slice(0,5)+' – '+t.hora_salida.slice(0,5);
+    }
+    return `<div class="shift-opt ${t.id===selShift?'sel':''}" onclick="selShiftFn(${t.id})">
+      <div class="shift-opt-name">${t.nombre}</div>
+      <div class="shift-opt-time">${timeLabel}</div>
+    </div>`;
+  }).join('');
+}
+
+function selShiftFn(id){
+  selShift=id;
+  renderShifts();
+  updateHorarioSection();
+  // Reset horario al default si cambia a turno editable
+  if(isNormal(id)){
+    const h=horarioNormal(currentDate);
+    document.getElementById('input-entrada').value=h.entrada;
+    document.getElementById('input-salida').value=h.salida;
+    recalcHint();
+  } else if(isNocturno(id)){
+    const t=getTurnoNocturno();
+    document.getElementById('input-entrada').value=t?t.hora_entrada.slice(0,5):'21:00';
+    document.getElementById('input-salida').value=t?t.hora_salida.slice(0,5):'06:00';
+    recalcHint();
+  }
+}
+
+function renderCCList(n){
+  const q=(document.getElementById(n===1?'cc-search':'cc-search2').value||'').toLowerCase();
+  const excl=n===2?selCC:null;
+  const filtered=centros.filter(c=>(!excl||c.id!==excl)&&(c.codigo.toLowerCase().includes(q)||c.nombre.toLowerCase().includes(q)))
+    .sort((a,b)=>b.codigo.localeCompare(a.codigo,undefined,{numeric:true})).slice(0,80);
+  const selId=n===1?selCC:selCC2;
+  document.getElementById('cc-list-'+n).innerHTML=filtered.map(c=>`
+    <div class="cc-item ${c.id===selId?'sel':''}" onclick="selCCFn(${n},${c.id})">
+      <span class="cc-code">${c.codigo}</span><span>${c.nombre}</span>
+    </div>`).join('')||'<div style="padding:12px;text-align:center;font-size:13px;color:#9CA3AF">Sin resultados</div>';
+}
+function selCCFn(n,id){
+  if(n===1){selCC=id;renderCCList(1);renderCCList(2);}
+  else{selCC2=id;renderCCList(2);}
+}
+function toggleSplit(){
+  splitOn=!splitOn;
+  document.getElementById('split-toggle').classList.toggle('on',splitOn);
+  document.getElementById('cc2-section').style.display=splitOn?'block':'none';
+  if(!splitOn)selCC2=null;
+}
+
+async function saveAssignment(){
+  const c=colaboradores[currentColabIdx];
+  const key=dateKey(currentDate);
+  let payload;
+
+  if(tipoAsignacion==='novedad'){
+    if(!selNovedad_val){showToast('Selecciona una categoría de ausencia');return;}
+    payload={fecha:key,colaborador_id:c.id,novedad:selNovedad_val,
+      turno_id:null,centro_costo_id:null,centro_costo_id2:null,
+      hora_entrada_custom:null,hora_salida_custom:null};
+  } else {
+    if(!selShift||!selCC){showToast('Selecciona turno y centro de costo');return;}
+    let hora_entrada_custom=null, hora_salida_custom=null;
+    if(isEditable(selShift)){
+      let defaultEntrada, defaultSalida;
+      if(isNormal(selShift)){
+        const h=horarioNormal(currentDate);
+        defaultEntrada=h.entrada; defaultSalida=h.salida;
+      } else {
+        const t=getTurnoNocturno();
+        defaultEntrada=t?t.hora_entrada.slice(0,5):'21:00';
+        defaultSalida=t?t.hora_salida.slice(0,5):'06:00';
+      }
+      const entrada=document.getElementById('input-entrada').value;
+      const salida=document.getElementById('input-salida').value;
+      if(entrada!==defaultEntrada||salida!==defaultSalida){
+        hora_entrada_custom=entrada; hora_salida_custom=salida;
+      }
+    }
+    payload={fecha:key,colaborador_id:c.id,turno_id:selShift,centro_costo_id:selCC,
+      centro_costo_id2:splitOn?selCC2:null,hora_entrada_custom,hora_salida_custom,novedad:null};
+  }
+
+  const existing=programacion[c.id];
+  const{error}=existing
+    ?await sb.from('programacion').update(payload).eq('id',existing.id)
+    :await sb.from('programacion').insert(payload);
+  if(error){showToast('Error: '+error.message);return;}
+  closeModal();showToast('✓ '+c.nombre.split(' ')[0]+' programado');
+  await loadProgramacion();
+}
+
+async function clearAssignment(){
+  const c=colaboradores[currentColabIdx];
+  const existing=programacion[c.id];
+  if(!existing)return;
+  const{error}=await sb.from('programacion').delete().eq('id',existing.id);
+  if(error){showToast('Error: '+error.message);return;}
+  closeModal();showToast('Asignación eliminada');
+  await loadProgramacion();
+}
+
+// ─── GESTIÓN DE PROYECTOS ────────────────────────────────────────────
+function setFilter(f){
+  proyFilter=f;
+  ['todos','activos','inactivos'].forEach(x=>document.getElementById('filter-'+x).classList.toggle('active',x===f));
+  renderProyectos();
+}
+function renderProyectos(){
+  const q=(document.getElementById('proj-search').value||'').toLowerCase();
+  const lista=centrosTodos.filter(c=>{
+    const matchQ=c.codigo.toLowerCase().includes(q)||c.nombre.toLowerCase().includes(q);
+    const matchF=proyFilter==='todos'||(proyFilter==='activos'&&c.activo)||(proyFilter==='inactivos'&&!c.activo);
+    return matchQ&&matchF;
+  });
+  if(!lista.length){document.getElementById('proj-list').innerHTML='<div class="empty">No hay proyectos que coincidan</div>';return;}
+  lista.sort((a,b)=>b.codigo.localeCompare(a.codigo,undefined,{numeric:true}));
+  document.getElementById('proj-list').innerHTML=lista.map(c=>`
+    <div class="proj-card ${c.activo?'':'inactive'}">
+      <div class="proj-info">
+        <div class="proj-code">${c.codigo}</div>
+        <div class="proj-name">${c.nombre}</div>
+      </div>
+      <div class="proj-actions">
+        <button class="icon-btn" onclick="abrirEditarProyecto(${c.id})" title="Editar">✏️</button>
+        <button class="icon-btn danger" onclick="eliminarProyecto(${c.id})" title="Eliminar">🗑️</button>
+        <button class="proj-toggle ${c.activo?'on':''}" onclick="toggleProyecto(${c.id},${c.activo})"></button>
+      </div>
+    </div>`).join('');
+}
+async function toggleProyecto(id,activo){
+  const{error}=await sb.from('centros_costo').update({activo:!activo}).eq('id',id);
+  if(error){showToast('Error: '+error.message);return;}
+  const idx=centrosTodos.findIndex(c=>c.id===id);
+  if(idx>=0)centrosTodos[idx].activo=!activo;
+  centros=centrosTodos.filter(x=>x.activo);
+  renderProyectos();
+  showToast(activo?'Proyecto desactivado':'Proyecto activado');
+}
+let editandoProyectoId=null;
+function openNuevoProyecto(){
+  editandoProyectoId=null;
+  document.getElementById('modal-proyecto-title').textContent='Nuevo proyecto';
+  document.getElementById('input-codigo').value='';
+  document.getElementById('input-nombre').value='';
+  document.getElementById('modal-proyecto').classList.add('open');
+  setTimeout(()=>document.getElementById('input-codigo').focus(),300);
+}
+function abrirEditarProyecto(id){
+  const c=centrosTodos.find(x=>x.id===id);
+  if(!c)return;
+  editandoProyectoId=id;
+  document.getElementById('modal-proyecto-title').textContent='Editar proyecto';
+  document.getElementById('input-codigo').value=c.codigo;
+  document.getElementById('input-nombre').value=c.nombre;
+  document.getElementById('modal-proyecto').classList.add('open');
+  setTimeout(()=>document.getElementById('input-codigo').focus(),300);
+}
+function closeProyectoOutside(e){if(e.target===document.getElementById('modal-proyecto'))document.getElementById('modal-proyecto').classList.remove('open');}
+async function guardarProyecto(){
+  const codigo=document.getElementById('input-codigo').value.trim();
+  const nombre=document.getElementById('input-nombre').value.trim().toUpperCase();
+  if(!codigo||!nombre){showToast('Completa código y nombre');return;}
+
+  if(editandoProyectoId){
+    const{data,error}=await sb.from('centros_costo').update({codigo,nombre}).eq('id',editandoProyectoId).select().single();
+    if(error){showToast('Error: '+error.message);return;}
+    const idx=centrosTodos.findIndex(c=>c.id===editandoProyectoId);
+    if(idx>=0)centrosTodos[idx]=data;
+    centrosTodos.sort((a,b)=>a.codigo.localeCompare(b.codigo));
+    centros=centrosTodos.filter(x=>x.activo);
+    document.getElementById('modal-proyecto').classList.remove('open');
+    renderProyectos();
+    showToast('✓ Proyecto '+codigo+' actualizado');
+    return;
+  }
+
+  const{data,error}=await sb.from('centros_costo').insert({codigo,nombre,activo:true}).select().single();
+  if(error){showToast('Error: '+error.message);return;}
+  centrosTodos.push(data);
+  centrosTodos.sort((a,b)=>a.codigo.localeCompare(b.codigo));
+  centros=centrosTodos.filter(x=>x.activo);
+  document.getElementById('modal-proyecto').classList.remove('open');
+  renderProyectos();
+  showToast('✓ Proyecto '+codigo+' agregado');
+}
+async function eliminarProyecto(id){
+  const c=centrosTodos.find(x=>x.id===id);
+  if(!c)return;
+  if(!confirm('¿Eliminar el proyecto '+c.codigo+' - '+c.nombre+'? Esto no se puede deshacer.'))return;
+  const{error}=await sb.from('centros_costo').delete().eq('id',id);
+  if(error){
+    if(error.message.includes('foreign key')||error.code==='23503'){
+      showToast('No se puede eliminar: ya tiene programación asociada. Desactívalo en su lugar.');
+    }else{
+      showToast('Error: '+error.message);
+    }
+    return;
+  }
+  centrosTodos=centrosTodos.filter(x=>x.id!==id);
+  centros=centrosTodos.filter(x=>x.activo);
+  renderProyectos();
+  showToast('✓ Proyecto '+c.codigo+' eliminado');
+}
+
+// ─── EQUIPO ──────────────────────────────────────────────────────────
+function setEFilter(f){
+  colabFilter=f;
+  ['todos','activos','inactivos'].forEach(x=>document.getElementById('efilter-'+x).classList.toggle('active',x===f));
+  renderEquipo();
+}
+function renderEquipo(){
+  const q=(document.getElementById('equipo-search').value||'').toLowerCase();
+  const lista=colaboradoresTodos.filter(c=>{
+    const matchQ=c.nombre.toLowerCase().includes(q)||(c.documento||'').toLowerCase().includes(q);
+    const matchF=colabFilter==='todos'||(colabFilter==='activos'&&c.activo)||(colabFilter==='inactivos'&&!c.activo);
+    return matchQ&&matchF;
+  });
+  if(!lista.length){document.getElementById('equipo-list').innerHTML='<div class="empty">No hay colaboradores que coincidan</div>';return;}
+  document.getElementById('equipo-list').innerHTML=lista.map((c,i)=>{
+    const av=c.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return `<div class="proj-card ${c.activo?'':'inactive'}">
+      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+        <div class="avatar ${AVC[i%6]}" style="flex-shrink:0">${av}</div>
+        <div class="proj-info" style="margin-right:0">
+          <div class="proj-name" style="margin-top:0">${c.nombre}</div>
+          <div class="card-doc">CC ${c.documento||'—'}</div>
+        </div>
+      </div>
+      <button class="proj-toggle ${c.activo?'on':''}" onclick="toggleColaborador(${c.id},${c.activo})"></button>
+    </div>`;
+  }).join('');
+}
+function openNuevoColaborador(){
+  document.getElementById('input-colab-nombre').value='';
+  document.getElementById('input-colab-documento').value='';
+  document.getElementById('modal-colaborador').classList.add('open');
+  setTimeout(()=>document.getElementById('input-colab-nombre').focus(),300);
+}
+function closeColaboradorOutside(e){if(e.target===document.getElementById('modal-colaborador'))document.getElementById('modal-colaborador').classList.remove('open');}
+async function guardarColaborador(){
+  const nombre=document.getElementById('input-colab-nombre').value.trim();
+  const documento=document.getElementById('input-colab-documento').value.trim();
+  if(!nombre){showToast('Ingresa el nombre del colaborador');return;}
+  const{data,error}=await sb.from('colaboradores').insert({nombre,documento:documento||null,activo:true}).select().single();
+  if(error){showToast('Error: '+error.message);return;}
+  colaboradoresTodos.push(data);
+  colaboradoresTodos.sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  colaboradores=colaboradoresTodos.filter(x=>x.activo);
+  document.getElementById('modal-colaborador').classList.remove('open');
+  renderEquipo();
+  showToast('✓ '+nombre.split(' ')[0]+' agregado al equipo');
+}
+async function toggleColaborador(id,activo){
+  const{error}=await sb.from('colaboradores').update({activo:!activo}).eq('id',id);
+  if(error){showToast('Error: '+error.message);return;}
+  const idx=colaboradoresTodos.findIndex(c=>c.id===id);
+  if(idx>=0)colaboradoresTodos[idx].activo=!activo;
+  colaboradores=colaboradoresTodos.filter(x=>x.activo);
+  renderEquipo();
+  showToast(activo?'Colaborador desactivado (se conserva su historial)':'Colaborador reactivado');
+}
+
+// ─── EXPORTAR EXCEL POR RANGO DE FECHAS ─────────────────────────────
+function primerYUltimoDiaMes(){
+  const hoy=new Date();
+  const primero=new Date(hoy.getFullYear(),hoy.getMonth(),1);
+  const ultimo=new Date(hoy.getFullYear(),hoy.getMonth()+1,0);
+  return[dateKey(primero),dateKey(ultimo)];
+}
+function nombreColab(id){
+  const c=colaboradoresTodos.find(x=>x.id===id);
+  return c?c.nombre:'(colaborador eliminado)';
+}
+function documentoColab(id){
+  const c=colaboradoresTodos.find(x=>x.id===id);
+  return c?.documento||'';
+}
+function labelNovedad(n){
+  return{vacaciones:'Vacaciones',incapacidad:'Incapacidad',permiso:'Permiso'}[n]||n;
+}
+function openExcelRango(){
+  const[d1,d2]=primerYUltimoDiaMes();
+  document.getElementById('excel-desde').value=d1;
+  document.getElementById('excel-hasta').value=d2;
+  document.getElementById('modal-excel-rango').classList.add('open');
+}
+function closeExcelRangoOutside(e){if(e.target===document.getElementById('modal-excel-rango'))document.getElementById('modal-excel-rango').classList.remove('open');}
+async function generarExcelRango(){
+  const desde=document.getElementById('excel-desde').value;
+  const hasta=document.getElementById('excel-hasta').value;
+  if(!desde||!hasta){showToast('Selecciona ambas fechas');return;}
+  if(desde>hasta){showToast('La fecha inicial debe ser menor a la final');return;}
+  showToast('Generando Excel...');
+  const{data,error}=await sb.from('programacion')
+    .select('fecha,colaborador_id,novedad,hora_entrada_custom,hora_salida_custom,turno:turno_id(nombre,hora_entrada,hora_salida),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)')
+    .gte('fecha',desde).lte('fecha',hasta).order('fecha');
+  if(error){showToast('Error: '+error.message);return;}
+  if(!data||!data.length){showToast('No hay programación en ese rango');return;}
+
+  const rows=[];
+  data.forEach(r=>{
+    const nombre=nombreColab(r.colaborador_id);
+    const documento=documentoColab(r.colaborador_id);
+    if(r.novedad){
+      rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:documento,Proyecto:'',Turno:'',Entrada:'',Salida:'',Novedad:labelNovedad(r.novedad)});
+      return;
+    }
+    const entrada=r.hora_entrada_custom||r.turno?.hora_entrada||'';
+    const salida=r.hora_salida_custom||r.turno?.hora_salida||'';
+    if(r.cc1) rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:documento,Proyecto:r.cc1.codigo+' - '+r.cc1.nombre,Turno:r.turno?.nombre||'',Entrada:entrada,Salida:salida,Novedad:''});
+    if(r.cc2) rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:documento,Proyecto:r.cc2.codigo+' - '+r.cc2.nombre,Turno:r.turno?.nombre||'',Entrada:entrada,Salida:salida,Novedad:''});
+  });
+  rows.sort((a,b)=>a.Fecha.localeCompare(b.Fecha)||a.Colaborador.localeCompare(b.Colaborador));
+
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:11},{wch:28},{wch:16},{wch:34},{wch:12},{wch:9},{wch:9},{wch:14}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Programación');
+  XLSX.writeFile(wb,'programacion_'+desde+'_a_'+hasta+'.xlsx');
+  document.getElementById('modal-excel-rango').classList.remove('open');
+  showToast('✓ Excel descargado');
+}
+
+// ─── REPORTE FIC (colaboradores distintos por proyecto/mes) ─────────
+function openFIC(){
+  const[d1,d2]=primerYUltimoDiaMes();
+  document.getElementById('fic-desde').value=d1;
+  document.getElementById('fic-hasta').value=d2;
+  const sel=document.getElementById('fic-centro');
+  sel.innerHTML='<option value="">Todos los proyectos</option>'+
+    centrosTodos.slice().sort((a,b)=>a.codigo.localeCompare(b.codigo))
+      .map(c=>`<option value="${c.id}">${c.codigo} - ${c.nombre}</option>`).join('');
+  document.getElementById('modal-fic').classList.add('open');
+}
+function closeFICOutside(e){if(e.target===document.getElementById('modal-fic'))document.getElementById('modal-fic').classList.remove('open');}
+async function generarFIC(){
+  const desde=document.getElementById('fic-desde').value;
+  const hasta=document.getElementById('fic-hasta').value;
+  const centroSel=document.getElementById('fic-centro').value;
+  if(!desde||!hasta){showToast('Selecciona ambas fechas');return;}
+  if(desde>hasta){showToast('La fecha inicial debe ser menor a la final');return;}
+  showToast('Generando reporte FIC...');
+  const{data,error}=await sb.from('programacion')
+    .select('colaborador_id,centro_costo_id,centro_costo_id2')
+    .gte('fecha',desde).lte('fecha',hasta).is('novedad',null);
+  if(error){showToast('Error: '+error.message);return;}
+  if(!data||!data.length){showToast('No hay programación en ese rango');return;}
+
+  const mapa={};
+  data.forEach(r=>{
+    [r.centro_costo_id,r.centro_costo_id2].forEach(cid=>{
+      if(!cid) return;
+      if(centroSel&&String(cid)!==centroSel) return;
+      if(!mapa[cid]) mapa[cid]=new Set();
+      mapa[cid].add(r.colaborador_id);
+    });
+  });
+  const centroIds=Object.keys(mapa).sort((a,b)=>{
+    const ca=centrosTodos.find(c=>String(c.id)===a),cb=centrosTodos.find(c=>String(c.id)===b);
+    return(ca?.codigo||'').localeCompare(cb?.codigo||'');
+  });
+  if(!centroIds.length){showToast('No hay datos para ese filtro');return;}
+
+  const resumenRows=[], detalleRows=[];
+  centroIds.forEach(cid=>{
+    const centro=centrosTodos.find(c=>String(c.id)===cid);
+    const set=mapa[cid];
+    resumenRows.push({Codigo:centro?.codigo||cid,Proyecto:centro?.nombre||'','Personas distintas':set.size});
+    set.forEach(colId=>detalleRows.push({Codigo:centro?.codigo||cid,Proyecto:centro?.nombre||'',Colaborador:nombreColab(colId),Documento:documentoColab(colId)}));
+  });
+
+  const wb=XLSX.utils.book_new();
+  const ws1=XLSX.utils.json_to_sheet(resumenRows);
+  ws1['!cols']=[{wch:10},{wch:34},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws1,'FIC - Resumen');
+  const ws2=XLSX.utils.json_to_sheet(detalleRows);
+  ws2['!cols']=[{wch:10},{wch:34},{wch:28},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws2,'FIC - Detalle');
+  const nombreArchivo=centroSel?('FIC_'+(centrosTodos.find(c=>String(c.id)===centroSel)?.codigo||centroSel)+'_'+desde+'_a_'+hasta+'.xlsx'):('FIC_'+desde+'_a_'+hasta+'.xlsx');
+  XLSX.writeFile(wb,nombreArchivo);
+  document.getElementById('modal-fic').classList.remove('open');
+  showToast('✓ Reporte FIC descargado');
+}
+
+// ─── REPETIR PROGRAMACIÓN DEL DÍA ANTERIOR ──────────────────────────
+function abrirRepetir(){
+  const anterior=new Date(currentDate); anterior.setDate(anterior.getDate()-1);
+  document.getElementById('repetir-sub').textContent='Copiará la programación de '+DAYS_S[anterior.getDay()]+' '+anterior.getDate()+' '+MONTHS[anterior.getMonth()].slice(0,3)+' hacia '+DAYS_S[currentDate.getDay()]+' '+currentDate.getDate()+' '+MONTHS[currentDate.getMonth()].slice(0,3)+' (hoy en la app)';
+  document.getElementById('repetir-sobrescribir').checked=false;
+  document.getElementById('modal-repetir').classList.add('open');
+}
+function closeRepetirOutside(e){if(e.target===document.getElementById('modal-repetir'))document.getElementById('modal-repetir').classList.remove('open');}
+async function ejecutarRepetir(){
+  const sobrescribir=document.getElementById('repetir-sobrescribir').checked;
+  const anterior=new Date(currentDate); anterior.setDate(anterior.getDate()-1);
+  const anteriorKey=dateKey(anterior);
+  const hoyKey=dateKey(currentDate);
+
+  showToast('Cargando programación del día anterior...');
+  const{data:origenRows,error:e0}=await sb.from('programacion').select('*').eq('fecha',anteriorKey);
+  if(e0){showToast('Error: '+e0.message);return;}
+  if(!origenRows||!origenRows.length){showToast('No hay programación el día anterior para repetir');return;}
+
+  const yaAsignadosHoy=new Set(Object.keys(programacion));
+  const registros=[];
+  origenRows.forEach(r=>{
+    if(!sobrescribir&&yaAsignadosHoy.has(String(r.colaborador_id))) return;
+    registros.push({fecha:hoyKey,colaborador_id:r.colaborador_id,turno_id:r.turno_id,centro_costo_id:r.centro_costo_id,centro_costo_id2:r.centro_costo_id2,hora_entrada_custom:r.hora_entrada_custom,hora_salida_custom:r.hora_salida_custom,novedad:r.novedad});
+  });
+  if(!registros.length){showToast('Todos ya tienen algo asignado hoy; nada para copiar');return;}
+
+  showToast('Repitiendo programación...');
+  const{error:e2}=await sb.from('programacion').upsert(registros,{onConflict:'fecha,colaborador_id'});
+  if(e2){showToast('Error: '+e2.message);return;}
+  document.getElementById('modal-repetir').classList.remove('open');
+  showToast('✓ Se copiaron '+registros.length+' asignación(es) de ayer');
+  loadProgramacion();
+}
+
+// ─── COMPARTIR PDF ───────────────────────────────────────────────────
+async function compartirPDF(){
+  showToast('Generando PDF...');
+  const blob = await generarPDFBlob();
+  if(!blob){ showToast('No hay programación para este día'); return; }
+  const key = dateKey(currentDate);
+  const fileName = 'programacion_'+key+'.pdf';
+  const file = new File([blob], fileName, {type:'application/pdf'});
+
+  // Intentar compartir nativo (móvil)
+  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+    try{
+      await navigator.share({
+        title: 'Programación '+DAYS[currentDate.getDay()]+' '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()],
+        text: 'Programación de jornadas del día',
+        files: [file]
+      });
+      return;
+    } catch(e){
+      if(e.name==='AbortError') return; // Usuario canceló
+    }
+  }
+
+  // Fallback: descargar el PDF
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=fileName; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ PDF descargado — compártelo desde tu galería');
+}
+
+async function generarPDFBlob(){
+  const key=dateKey(currentDate);
+  const{data}=await sb.from('programacion').select('*').eq('fecha',key);
+  if(!data||!data.length) return null;
+
+  const grupos={};
+  const novedades=[];
+
+  data.forEach(r=>{
+    const colab=colaboradoresTodos.find(c=>c.id===r.colaborador_id);
+    const doc_id=colab?.documento||'';
+    // Si tiene novedad, separar
+    if(r.novedad){
+      novedades.push({nombre:colab?.nombre||'',documento:doc_id,novedad:r.novedad});
+      return;
+    }
+    const turno=turnos.find(t=>t.id===r.turno_id);
+    const cc=centrosTodos.find(c=>c.id===r.centro_costo_id);
+    const cc2=r.centro_costo_id2?centrosTodos.find(c=>c.id===r.centro_costo_id2):null;
+    let entrada,salida;
+    if(r.hora_entrada_custom&&r.hora_salida_custom){
+      entrada=r.hora_entrada_custom.slice(0,5); salida=r.hora_salida_custom.slice(0,5);
+    } else if(turno&&turno.nombre==='Normal'){
+      const h=horarioNormal(currentDate); entrada=h.entrada; salida=h.salida;
+    } else {
+      entrada=turno?turno.hora_entrada.slice(0,5):'';
+      salida=turno?turno.hora_salida.slice(0,5):'';
+    }
+    const horario=entrada+' - '+salida;
+    if(cc){
+      const k=cc.codigo+'||'+cc.nombre;
+      if(!grupos[k])grupos[k]=[];
+      grupos[k].push({nombre:colab?.nombre||'',documento:doc_id,horario});
+    }
+    if(cc2){
+      const k2=cc2.codigo+'||'+cc2.nombre;
+      if(!grupos[k2])grupos[k2]=[];
+      grupos[k2].push({nombre:colab?.nombre||'',documento:doc_id,horario:'Jornada partida'});
+    }
+  });
+
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const W=210,margin=15; let y=margin;
+
+  // Encabezado
+  doc.setFillColor(67,56,202); doc.rect(0,0,W,28,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','normal');
+  doc.text('SAV INGENIERÍA SAS',margin,7);
+  doc.setFontSize(16); doc.setFont('helvetica','bold');
+  doc.text('Programacion de Jornadas',margin,15);
+  doc.setFontSize(11); doc.setFont('helvetica','normal');
+  doc.text(DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()]+' '+currentDate.getFullYear(),margin,23);
+  doc.setTextColor(0,0,0); y=36;
+
+  // Proyectos
+  const entries=Object.entries(grupos).sort((a,b)=>a[0].localeCompare(b[0]));
+  entries.forEach(([k,miembros])=>{
+    const[cod,nom]=k.split('||');
+    if(y>260){doc.addPage();y=margin;}
+    doc.setFillColor(238,242,255); doc.rect(margin,y,W-margin*2,8,'F');
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(67,56,202);
+    doc.text(cod+' - '+nom,margin+2,y+5.5); doc.setTextColor(0,0,0); y+=10;
+    miembros.forEach(m=>{
+      if(y>270){doc.addPage();y=margin;}
+      doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
+      doc.text('  '+m.nombre,margin+2,y);
+      doc.setTextColor(100,100,100); doc.text(m.horario,W-margin-38,y);
+      doc.setTextColor(0,0,0); y+=4.5;
+      doc.setFontSize(7.5); doc.setTextColor(140,140,140);
+      doc.text('   CC '+(m.documento||'—'),margin+2,y);
+      doc.setTextColor(0,0,0); y+=5.5;
+    });
+    y+=4;
+  });
+
+  // Sección de novedades al final
+  if(novedades.length>0){
+    if(y>250){doc.addPage();y=margin;}
+    y+=4;
+    // Cabecera sección novedades
+    doc.setFillColor(254,243,199); doc.rect(margin,y,W-margin*2,8,'F');
+    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(146,64,14);
+    doc.text('NOVEDADES DEL DIA',margin+2,y+5.5);
+    doc.setTextColor(0,0,0); y+=10;
+
+    // Agrupar por tipo de novedad
+    const grupos_nov={'vacaciones':[],'incapacidad':[],'permiso':[]};
+    novedades.forEach(n=>{ if(grupos_nov[n.novedad]) grupos_nov[n.novedad].push({nombre:n.nombre,documento:n.documento}); });
+    const nov_labels={'vacaciones':'Vacaciones','incapacidad':'Incapacidad','permiso':'Permiso'};
+
+    Object.entries(grupos_nov).forEach(([tipo,items])=>{
+      if(!items.length) return;
+      if(y>265){doc.addPage();y=margin;}
+      doc.setFontSize(9.5); doc.setFont('helvetica','bold'); doc.setTextColor(146,64,14);
+      doc.text(nov_labels[tipo]+':',margin+2,y);
+      doc.setTextColor(0,0,0); y+=6;
+      items.forEach(item=>{
+        if(y>270){doc.addPage();y=margin;}
+        doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
+        doc.text('  '+item.nombre,margin+4,y);
+        doc.setFontSize(7.5); doc.setTextColor(140,140,140);
+        doc.text('CC '+(item.documento||'—'),W-margin-38,y);
+        doc.setTextColor(0,0,0); y+=6;
+      });
+      y+=2;
+    });
+  }
+
+  doc.setFontSize(8); doc.setTextColor(150,150,150);
+  doc.text('Generado por Jornadas App',margin,290);
+  return doc.output('blob');
+}
+
+
+async function exportPDFDia(){
+  showToast('Generando PDF...');
+  const blob=await generarPDFBlob();
+  if(!blob){showToast('No hay programación para este día');return;}
+  const key=dateKey(currentDate);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download='programacion_'+key+'.pdf';a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ PDF descargado');
+}
+
+// ─── REPORTE MENSUAL ─────────────────────────────────────────────────
+async function loadReport(){
+  document.getElementById('report-content').innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  document.getElementById('month-label').textContent=DAYS[currentDate.getDay()]+' '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()];
+  const key=dateKey(currentDate);
+  const{data}=await sb.from('programacion').select('colaborador_id,novedad,cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').eq('fecha',key);
+  if(!data||!data.length){document.getElementById('report-content').innerHTML='<div class="empty">No hay programaciones para este día.</div>';return;}
+
+  // Separar proyectos y novedades
+  const grupos={};
+  const novedades={vacaciones:[],incapacidad:[],permiso:[]};
+  data.forEach(r=>{
+    const colab=colaboradoresTodos.find(c=>c.id===r.colaborador_id);
+    const nombre=colab?.nombre||'';
+    if(r.novedad){
+      if(novedades[r.novedad]) novedades[r.novedad].push(nombre);
+      return;
+    }
+    if(r.cc1){const k=r.cc1.codigo+'|'+r.cc1.nombre;if(!grupos[k])grupos[k]=[];grupos[k].push(nombre);}
+    if(r.cc2){const k2=r.cc2.codigo+'|'+r.cc2.nombre;if(!grupos[k2])grupos[k2]=[];grupos[k2].push(nombre);}
+  });
+
+  const entries=Object.entries(grupos).sort((a,b)=>b[1].length-a[1].length);
+  const max=entries[0]?entries[0][1].length:1;
+  const totalNov=Object.values(novedades).flat().length;
+  const nov_labels={vacaciones:'🏖️ Vacaciones',incapacidad:'🏥 Incapacidad',permiso:'📝 Permiso'};
+
+  const novHtml=totalNov>0?`
+    <div class="report-card" style="margin-top:8px;background:#FFFBEB;border:1px solid #FDE68A">
+      <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:8px">Novedades del día</div>
+      ${Object.entries(novedades).filter(([,v])=>v.length>0).map(([tipo,nombres])=>`
+        <div style="margin-bottom:8px">
+          <div style="font-size:12px;font-weight:600;color:#92400E;margin-bottom:4px">${nov_labels[tipo]}</div>
+          ${nombres.map(n=>`<div style="font-size:12px;color:#374151;padding:2px 0">• ${n}</div>`).join('')}
+        </div>`).join('')}
+    </div>`:'';
+
+  document.getElementById('report-content').innerHTML=`
+    <div class="report-card">
+      <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:4px">Colaboradores por proyecto</div>
+      <div style="font-size:12px;color:#9CA3AF;margin-bottom:12px">${entries.length} proyectos · ${data.length-totalNov} en campo${totalNov>0?' · '+totalNov+' con novedad':''}</div>
+      ${entries.map(([k,colabs])=>{
+        const[cod,nom]=k.split('|');
+        return`<div class="report-row">
+          <div class="report-cc">
+            <div class="report-code">${cod}</div>
+            <div>${nom.slice(0,32)}</div>
+            <div class="progress"><div class="progress-fill" style="width:${Math.round(colabs.length/max*100)}%"></div></div>
+          </div>
+          <div class="report-hrs">${colabs.length} 👤</div>
+        </div>`;
+      }).join('')}
+    </div>
+    ${novHtml}`;
+}
+
+function calcHrs(t){
+  if(!t)return 8;
+  const[h1,m1]=t.hora_entrada.split(':').map(Number);
+  const[h2,m2]=t.hora_salida.split(':').map(Number);
+  return(h2*60+m2-h1*60-m1)/60;
+}
+function changeMonth(d){currentMonth.setMonth(currentMonth.getMonth()+d);loadReport();}
+
+async function exportCSV(){
+  showToast('Generando CSV...');
+  const y=currentMonth.getFullYear(),m=currentMonth.getMonth();
+  const from=new Date(y,m,1).toISOString().slice(0,10);
+  const to=new Date(y,m+1,0).toISOString().slice(0,10);
+  const{data}=await sb.from('programacion').select('fecha,hora_entrada_custom,hora_salida_custom,colaboradores(nombre),turnos(nombre,hora_entrada,hora_salida),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').gte('fecha',from).lte('fecha',to).order('fecha');
+  if(!data||!data.length){showToast('Sin datos para exportar');return;}
+  const rows=[['Fecha','Colaborador','Turno','Entrada','Salida','CC1 Codigo','CC1 Nombre','CC2 Codigo','CC2 Nombre']];
+  data.forEach(r=>{
+    let entrada=r.hora_entrada_custom?.slice(0,5)||r.turnos?.hora_entrada?.slice(0,5)||'';
+    let salida=r.hora_salida_custom?.slice(0,5)||r.turnos?.hora_salida?.slice(0,5)||'';
+    if(!r.hora_entrada_custom&&r.turnos?.nombre==='Normal'){
+      const h=horarioNormal(new Date(r.fecha+'T12:00:00'));
+      entrada=h.entrada;salida=h.salida;
+    }
+    rows.push([r.fecha,r.colaboradores?.nombre||'',r.turnos?.nombre||'',entrada,salida,r.cc1?.codigo||'',r.cc1?.nombre||'',r.cc2?.codigo||'',r.cc2?.nombre||'']);
+  });
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`jornadas_${from}_${to}.csv`;a.click();URL.revokeObjectURL(url);
+  showToast('✓ CSV descargado');
+}
+
+let toastTimer;
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+init();
+</script>
+</body>
+</html>
