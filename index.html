@@ -168,8 +168,13 @@
   </div>
   <div class="content">
     <div class="view active" id="view-prog">
-      <button class="pdf-btn" style="background:#0891B2;margin-bottom:10px" onclick="abrirRepetir()">📋 Repetir programación del día anterior</button>
+      <button class="pdf-btn" style="background:#0891B2;margin-bottom:10px" onclick="abrirRepetir()">📋 Repetir programación de un día anterior</button>
+      <div class="proj-filter" style="margin-bottom:10px">
+        <button class="filter-btn active" id="pm-colab" onclick="setProgMode('colab')">👤 Por colaborador</button>
+        <button class="filter-btn" id="pm-proyecto" onclick="setProgMode('proyecto')">🏗️ Por proyecto</button>
+      </div>
       <div id="collab-list"><div class="loading"><div class="spinner"></div><div style="font-size:13px;color:#6B7280">Cargando...</div></div></div>
+      <div id="proyecto-prog-list" style="display:none"></div>
     </div>
     <div class="view" id="view-report">
       <div class="month-nav">
@@ -362,12 +367,39 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Repetir programación</div>
-    <div class="modal-sub" id="repetir-sub">Copiará la programación del día anterior hacia este día</div>
+    <div class="modal-sub" id="repetir-sub">Elige de qué día quieres copiar la programación</div>
+    <div class="form-group">
+      <label class="form-label">Copiar programación de</label>
+      <input class="form-input" id="repetir-origen" type="date">
+    </div>
     <div class="form-group" style="display:flex;align-items:center;gap:8px">
       <input type="checkbox" id="repetir-sobrescribir" style="width:18px;height:18px">
       <label class="form-label" style="margin:0" for="repetir-sobrescribir">Sobrescribir si ya hay algo asignado hoy</label>
     </div>
     <button class="btn btn-primary" onclick="ejecutarRepetir()">✓ Repetir programación</button>
+  </div>
+</div>
+
+<!-- MODAL ASIGNAR POR PROYECTO -->
+<div class="modal-backdrop" id="modal-asignar-proyecto" onclick="closeAsignarProyectoOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="ap-title"></div>
+    <div class="modal-sub" id="ap-date-sub"></div>
+    <div class="section-title">Turno</div>
+    <div class="shift-grid" id="ap-shift-grid"></div>
+    <div id="ap-horario-section" style="display:none">
+      <div class="section-title">Horario</div>
+      <div class="time-hint" id="ap-time-hint"></div>
+      <div class="time-row" style="margin-top:8px">
+        <div class="time-group"><span class="time-label">Entrada</span><input class="time-input" type="time" id="ap-input-entrada" onchange="apRecalcHint()"></div>
+        <div class="time-group"><span class="time-label">Salida</span><input class="time-input" type="time" id="ap-input-salida" onchange="apRecalcHint()"></div>
+      </div>
+    </div>
+    <div class="section-title">Colaboradores</div>
+    <input class="search-input" id="ap-colab-search" placeholder="🔍 Buscar colaborador..." oninput="apRenderColabList()">
+    <div class="cc-list" id="ap-colab-list" style="max-height:280px"></div>
+    <button class="btn btn-primary" onclick="apGuardar()" style="margin-top:10px">✓ Guardar asignaciones</button>
   </div>
 </div>
 
@@ -382,7 +414,8 @@ let colaboradores=[], colaboradoresTodos=[], centros=[], centrosTodos=[], turnos
 let currentDate=new Date(), currentMonth=new Date();
 let currentColabIdx=null, splitOn=false, selShift=null, selCC=null, selCC2=null;
 let tipoAsignacion='proyecto', selNovedad_val=null;
-let proyFilter='todos', colabFilter='todos';
+let proyFilter='todos', colabFilter='todos', progMode='colab';
+let apProjectId=null, apShift=null, apChecked=new Set();
 const AVC=['av0','av1','av2','av3','av4','av5'];
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DAYS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
@@ -443,6 +476,7 @@ async function loadProgramacion(){
   programacion={};
   (data||[]).forEach(r=>{programacion[r.colaborador_id]=r;});
   renderCollabs();
+  if(progMode==='proyecto') renderProyectoProg();
 }
 
 function getHorarioReal(asn){
@@ -983,21 +1017,25 @@ async function generarFIC(){
 // ─── REPETIR PROGRAMACIÓN DEL DÍA ANTERIOR ──────────────────────────
 function abrirRepetir(){
   const anterior=new Date(currentDate); anterior.setDate(anterior.getDate()-1);
-  document.getElementById('repetir-sub').textContent='Copiará la programación de '+DAYS_S[anterior.getDay()]+' '+anterior.getDate()+' '+MONTHS[anterior.getMonth()].slice(0,3)+' hacia '+DAYS_S[currentDate.getDay()]+' '+currentDate.getDate()+' '+MONTHS[currentDate.getMonth()].slice(0,3)+' (hoy en la app)';
+  const hoyKey=dateKey(currentDate);
+  document.getElementById('repetir-sub').textContent='Se copiará hacia '+DAYS_S[currentDate.getDay()]+' '+currentDate.getDate()+' '+MONTHS[currentDate.getMonth()].slice(0,3)+' (día actual en la app)';
+  document.getElementById('repetir-origen').value=dateKey(anterior);
+  document.getElementById('repetir-origen').max=dateKey(anterior);
   document.getElementById('repetir-sobrescribir').checked=false;
   document.getElementById('modal-repetir').classList.add('open');
 }
 function closeRepetirOutside(e){if(e.target===document.getElementById('modal-repetir'))document.getElementById('modal-repetir').classList.remove('open');}
 async function ejecutarRepetir(){
   const sobrescribir=document.getElementById('repetir-sobrescribir').checked;
-  const anterior=new Date(currentDate); anterior.setDate(anterior.getDate()-1);
-  const anteriorKey=dateKey(anterior);
+  const origenKey=document.getElementById('repetir-origen').value;
   const hoyKey=dateKey(currentDate);
+  if(!origenKey){showToast('Selecciona la fecha de origen');return;}
+  if(origenKey>=hoyKey){showToast('La fecha de origen debe ser anterior al día actual');return;}
 
-  showToast('Cargando programación del día anterior...');
-  const{data:origenRows,error:e0}=await sb.from('programacion').select('*').eq('fecha',anteriorKey);
+  showToast('Cargando programación de ese día...');
+  const{data:origenRows,error:e0}=await sb.from('programacion').select('*').eq('fecha',origenKey);
   if(e0){showToast('Error: '+e0.message);return;}
-  if(!origenRows||!origenRows.length){showToast('No hay programación el día anterior para repetir');return;}
+  if(!origenRows||!origenRows.length){showToast('No hay programación ese día para repetir');return;}
 
   const yaAsignadosHoy=new Set(Object.keys(programacion));
   const registros=[];
@@ -1011,8 +1049,159 @@ async function ejecutarRepetir(){
   const{error:e2}=await sb.from('programacion').upsert(registros,{onConflict:'fecha,colaborador_id'});
   if(e2){showToast('Error: '+e2.message);return;}
   document.getElementById('modal-repetir').classList.remove('open');
-  showToast('✓ Se copiaron '+registros.length+' asignación(es) de ayer');
+  showToast('✓ Se copiaron '+registros.length+' asignación(es)');
   loadProgramacion();
+}
+
+// ─── MODO DE PROGRAMACIÓN: POR COLABORADOR / POR PROYECTO ──────────
+function setProgMode(m){
+  progMode=m;
+  document.getElementById('pm-colab').classList.toggle('active',m==='colab');
+  document.getElementById('pm-proyecto').classList.toggle('active',m==='proyecto');
+  document.getElementById('collab-list').style.display=m==='colab'?'':'none';
+  document.getElementById('proyecto-prog-list').style.display=m==='proyecto'?'':'none';
+  if(m==='proyecto') renderProyectoProg();
+}
+function renderProyectoProg(){
+  const activos=centros.slice().sort((a,b)=>b.codigo.localeCompare(a.codigo,undefined,{numeric:true}));
+  if(!activos.length){document.getElementById('proyecto-prog-list').innerHTML='<div class="empty">No hay proyectos activos</div>';return;}
+  document.getElementById('proyecto-prog-list').innerHTML=activos.map(c=>{
+    let count=0;
+    colaboradores.forEach(col=>{
+      const asn=programacion[col.id];
+      if(asn&&!asn.novedad&&(asn.centro_costo_id===c.id||asn.centro_costo_id2===c.id)) count++;
+    });
+    return `<div class="proj-card" style="cursor:pointer" onclick="abrirAsignarProyecto(${c.id})">
+      <div class="proj-info"><div class="proj-code">${c.codigo}</div><div class="proj-name">${c.nombre}</div></div>
+      <div style="font-size:13px;color:${count?'var(--primary)':'var(--gray-400)'};font-weight:600;flex-shrink:0">${count} 👤</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── MODAL: ASIGNAR COLABORADORES DISPONIBLES A UN PROYECTO ────────
+function abrirAsignarProyecto(projectId){
+  apProjectId=projectId;
+  const c=centrosTodos.find(x=>x.id===projectId);
+  document.getElementById('ap-title').textContent=c.codigo+' - '+c.nombre;
+  document.getElementById('ap-date-sub').textContent=DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()];
+  apShift=getTurnoNormal()?.id||turnos[0]?.id||null;
+  apChecked=new Set();
+  let horaRef=null;
+  colaboradores.forEach(col=>{
+    const asn=programacion[col.id];
+    if(asn&&!asn.novedad&&asn.centro_costo_id===projectId){
+      apChecked.add(col.id);
+      apShift=asn.turno_id;
+      if(asn.hora_entrada_custom) horaRef=asn;
+    }
+  });
+  document.getElementById('ap-colab-search').value='';
+  apRenderShifts();
+  if(horaRef){
+    document.getElementById('ap-input-entrada').value=horaRef.hora_entrada_custom.slice(0,5);
+    document.getElementById('ap-input-salida').value=horaRef.hora_salida_custom.slice(0,5);
+  } else if(isNocturno(apShift)){
+    const t=getTurnoNocturno();
+    document.getElementById('ap-input-entrada').value=t?t.hora_entrada.slice(0,5):'21:00';
+    document.getElementById('ap-input-salida').value=t?t.hora_salida.slice(0,5):'06:00';
+  } else {
+    const h=horarioNormal(currentDate);
+    document.getElementById('ap-input-entrada').value=h.entrada;
+    document.getElementById('ap-input-salida').value=h.salida;
+  }
+  apUpdateHorarioSection();
+  apRenderColabList();
+  document.getElementById('modal-asignar-proyecto').classList.add('open');
+}
+function closeAsignarProyectoOutside(e){if(e.target===document.getElementById('modal-asignar-proyecto'))document.getElementById('modal-asignar-proyecto').classList.remove('open');}
+function apRenderShifts(){
+  document.getElementById('ap-shift-grid').innerHTML=turnos.map(t=>{
+    let timeLabel='';
+    if(t.nombre==='Normal'){ const h=horarioNormal(currentDate); timeLabel=h.entrada+' – '+h.salida; }
+    else { timeLabel=t.hora_entrada.slice(0,5)+' – '+t.hora_salida.slice(0,5); }
+    return `<div class="shift-opt ${t.id===apShift?'sel':''}" onclick="apSelShiftFn(${t.id})">
+      <div class="shift-opt-name">${t.nombre}</div>
+      <div class="shift-opt-time">${timeLabel}</div>
+    </div>`;
+  }).join('');
+}
+function apSelShiftFn(id){ apShift=id; apRenderShifts(); apUpdateHorarioSection(); }
+function apUpdateHorarioSection(){
+  const show=isEditable(apShift);
+  document.getElementById('ap-horario-section').style.display=show?'block':'none';
+  if(show) apRecalcHint();
+}
+function apRecalcHint(){
+  let defaultEntrada,defaultSalida,label;
+  if(isNormal(apShift)){ const h=horarioNormal(currentDate); defaultEntrada=h.entrada; defaultSalida=h.salida; label=h.label; }
+  else { const t=getTurnoNocturno(); defaultEntrada=t?t.hora_entrada.slice(0,5):'21:00'; defaultSalida=t?t.hora_salida.slice(0,5):'06:00'; label='Nocturno: '+defaultEntrada+' - '+defaultSalida; }
+  const entrada=document.getElementById('ap-input-entrada').value;
+  const salida=document.getElementById('ap-input-salida').value;
+  const esDefault=entrada===defaultEntrada&&salida===defaultSalida;
+  document.getElementById('ap-time-hint').textContent=esDefault?'⏰ Horario por defecto: '+label:'✏️ Horario modificado';
+}
+function apToggleColab(id){
+  if(apChecked.has(id)) apChecked.delete(id); else apChecked.add(id);
+  apRenderColabList();
+}
+function apRenderColabList(){
+  const q=(document.getElementById('ap-colab-search').value||'').toLowerCase();
+  const lista=colaboradores.filter(c=>c.nombre.toLowerCase().includes(q));
+  if(!lista.length){document.getElementById('ap-colab-list').innerHTML='<div class="empty">Sin resultados</div>';return;}
+  document.getElementById('ap-colab-list').innerHTML=lista.map(c=>{
+    const asn=programacion[c.id];
+    let nota='';
+    if(asn&&asn.novedad){
+      nota=' <span style="font-size:11px;color:#B45309">· '+({vacaciones:'vacaciones',incapacidad:'incapacidad',permiso:'permiso'}[asn.novedad])+'</span>';
+    } else if(asn&&asn.centro_costo_id!==apProjectId){
+      const otro=centrosTodos.find(x=>x.id===asn.centro_costo_id);
+      nota=' <span style="font-size:11px;color:var(--gray-400)">· hoy en '+(otro?otro.codigo:'?')+'</span>';
+    }
+    return `<div class="cc-item ${apChecked.has(c.id)?'sel':''}" onclick="apToggleColab(${c.id})">
+      <input type="checkbox" ${apChecked.has(c.id)?'checked':''} style="pointer-events:none" tabindex="-1">
+      <div style="flex:1;min-width:0">${c.nombre}${nota}</div>
+    </div>`;
+  }).join('');
+}
+async function apGuardar(){
+  if(!apShift){showToast('Selecciona un turno');return;}
+  const key=dateKey(currentDate);
+  let horaEntrada=null,horaSalida=null;
+  if(isEditable(apShift)){
+    horaEntrada=document.getElementById('ap-input-entrada').value;
+    horaSalida=document.getElementById('ap-input-salida').value;
+    if(isNormal(apShift)){
+      const h=horarioNormal(currentDate);
+      if(horaEntrada===h.entrada&&horaSalida===h.salida){horaEntrada=null;horaSalida=null;}
+    } else {
+      const t=getTurnoNocturno();
+      const de=t?t.hora_entrada.slice(0,5):'21:00', ds=t?t.hora_salida.slice(0,5):'06:00';
+      if(horaEntrada===de&&horaSalida===ds){horaEntrada=null;horaSalida=null;}
+    }
+  }
+  const registros=[];
+  apChecked.forEach(id=>{
+    registros.push({fecha:key,colaborador_id:id,turno_id:apShift,centro_costo_id:apProjectId,centro_costo_id2:null,hora_entrada_custom:horaEntrada,hora_salida_custom:horaSalida,novedad:null});
+  });
+  const paraQuitar=[];
+  colaboradores.forEach(c=>{
+    const asn=programacion[c.id];
+    if(asn&&!asn.novedad&&asn.centro_costo_id===apProjectId&&!apChecked.has(c.id)) paraQuitar.push(c.id);
+  });
+  if(!registros.length&&!paraQuitar.length){showToast('No hay cambios para guardar');return;}
+  showToast('Guardando asignaciones...');
+  if(registros.length){
+    const{error:e1}=await sb.from('programacion').upsert(registros,{onConflict:'fecha,colaborador_id'});
+    if(e1){showToast('Error: '+e1.message);return;}
+  }
+  if(paraQuitar.length){
+    const{error:e2}=await sb.from('programacion').delete().eq('fecha',key).in('colaborador_id',paraQuitar);
+    if(e2){showToast('Error: '+e2.message);return;}
+  }
+  document.getElementById('modal-asignar-proyecto').classList.remove('open');
+  showToast('✓ Asignaciones guardadas');
+  await loadProgramacion();
+  if(progMode==='proyecto') renderProyectoProg();
 }
 
 // ─── COMPARTIR PDF ───────────────────────────────────────────────────
