@@ -442,7 +442,7 @@ const DAYS_S=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 // 0=Dom,1=Lun,2=Mar,3=Mié,4=Jue,5=Vie,6=Sáb
 function horarioNormal(fecha){
   const dia=fecha.getDay();
-  if(dia===5) return {entrada:'07:00', salida:'15:00', label:'Viernes: 7:00 - 15:00'};
+  if(dia===5) return {entrada:'07:00', salida:'13:15', label:'Viernes: 7:00 - 1:15 p.m.'};
   if(dia===6) return {entrada:'07:00', salida:'11:00', label:'Sábado: 7:00 - 11:00'};
   if(dia===0) return {entrada:'07:00', salida:'16:00', label:'Domingo: 7:00 - 16:00'};
   return {entrada:'07:00', salida:'16:00', label:'Lun-Jue: 7:00 - 16:00'};
