@@ -38,9 +38,10 @@
   .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .view { display: none; padding: 12px; }
   .view.active { display: block; }
-  .collab-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; cursor: pointer; }
+  .collab-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; cursor: pointer; transition: box-shadow 0.3s, border-color 0.3s; }
   .collab-card.assigned { border-left: 3px solid var(--success); }
   .collab-card.pending { border-left: 3px solid var(--gray-300); }
+  .collab-card.next-highlight { border-color: var(--primary) !important; box-shadow: 0 0 0 3px var(--primary-light); }
   .card-top { display: flex; align-items: center; gap: 10px; }
   .avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
   .card-info { flex: 1; min-width: 0; }
@@ -91,7 +92,6 @@
   .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
   .month-btn { background: var(--gray-100); border: none; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; color: var(--gray-700); font-weight: 500; }
   .month-label { font-size: 15px; font-weight: 700; }
-  .export-btn { width: 100%; padding: 12px; border: 1.5px solid var(--primary); border-radius: var(--radius); font-size: 14px; font-weight: 600; color: var(--primary); background: white; cursor: pointer; margin-top: 8px; }
   .pdf-btn { width: 100%; padding: 12px; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; color: white; background: var(--success); cursor: pointer; margin-top: 8px; }
   .report-card { background: #F9FAFB; border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
   .report-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--gray-200); }
@@ -117,9 +117,7 @@
   .proj-toggle.on::after { transform: translateX(20px); }
   .proj-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
   .icon-btn { width: 28px; height: 28px; border: none; border-radius: 8px; background: var(--gray-100); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; padding: 0; }
-  .icon-btn:active { background: var(--gray-200); }
   .icon-btn.danger { background: #FEE2E2; }
-  .icon-btn.danger:active { background: #FECACA; }
   .add-btn { width: 100%; padding: 13px; border: 1.5px dashed var(--primary); border-radius: var(--radius); font-size: 14px; font-weight: 600; color: var(--primary); background: white; cursor: pointer; margin-bottom: 12px; }
   .form-group { margin-bottom: 12px; }
   .form-label { font-size: 12px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; display: block; }
@@ -136,12 +134,12 @@
   .empty { text-align: center; padding: 40px 24px; color: var(--gray-400); font-size: 14px; }
   .novedad-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 4px; }
   .novedad-opt { border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); padding: 14px 6px; text-align: center; cursor: pointer; transition: all 0.15s; }
-  .novedad-opt:active { border-color: var(--warning); }
   .novedad-opt.sel { border-color: var(--warning); background: var(--warning-light); }
   .novedad-icon { font-size: 24px; margin-bottom: 4px; }
   .novedad-name { font-size: 12px; font-weight: 600; color: var(--gray-700); }
   .novedad-opt.sel .novedad-name { color: var(--warning); }
-  .badge-novedad { background: #FEF3C7; color: #92400E; } .av1{background:#D1FAE5;color:#065F46} .av2{background:#FEF3C7;color:#92400E} .av3{background:#FCE7F3;color:#9D174D} .av4{background:#E0F2FE;color:#0C4A6E} .av5{background:#F0FDF4;color:#14532D}
+  .badge-novedad { background: #FEF3C7; color: #92400E; }
+  .av0{background:#EEF2FF;color:#4338CA} .av1{background:#D1FAE5;color:#065F46} .av2{background:#FEF3C7;color:#92400E} .av3{background:#FCE7F3;color:#9D174D} .av4{background:#E0F2FE;color:#0C4A6E} .av5{background:#F0FDF4;color:#14532D}
 </style>
 </head>
 <body>
@@ -219,21 +217,11 @@
     <div class="modal-handle"></div>
     <div class="modal-title" id="modal-name"></div>
     <div class="modal-sub" id="modal-date-sub"></div>
-
-    <!-- Selector tipo: Proyecto o Novedad -->
     <div class="section-title">Tipo de asignación</div>
     <div class="shift-grid" style="grid-template-columns:1fr 1fr;margin-bottom:4px">
-      <div class="shift-opt sel" id="tipo-proyecto" onclick="setTipo('proyecto')">
-        <div class="shift-opt-name">🏗️ Proyecto</div>
-        <div class="shift-opt-time">Asignar a obra</div>
-      </div>
-      <div class="shift-opt" id="tipo-novedad" onclick="setTipo('novedad')">
-        <div class="shift-opt-name">📋 Novedad</div>
-        <div class="shift-opt-time">Ausencia</div>
-      </div>
+      <div class="shift-opt sel" id="tipo-proyecto" onclick="setTipo('proyecto')"><div class="shift-opt-name">🏗️ Proyecto</div><div class="shift-opt-time">Asignar a obra</div></div>
+      <div class="shift-opt" id="tipo-novedad" onclick="setTipo('novedad')"><div class="shift-opt-name">📋 Novedad</div><div class="shift-opt-time">Ausencia</div></div>
     </div>
-
-    <!-- SECCIÓN PROYECTO -->
     <div id="seccion-proyecto">
       <div class="section-title">Turno</div>
       <div class="shift-grid" id="shift-grid"></div>
@@ -241,14 +229,8 @@
         <div class="section-title">Horario del centro principal</div>
         <div class="time-hint" id="time-hint"></div>
         <div class="time-row" style="margin-top:8px">
-          <div class="time-group">
-            <span class="time-label">Entrada</span>
-            <input class="time-input" type="time" id="input-entrada" onchange="recalcHint()">
-          </div>
-          <div class="time-group">
-            <span class="time-label">Salida</span>
-            <input class="time-input" type="time" id="input-salida" onchange="recalcHint()">
-          </div>
+          <div class="time-group"><span class="time-label">Entrada</span><input class="time-input" type="time" id="input-entrada" onchange="recalcHint()"></div>
+          <div class="time-group"><span class="time-label">Salida</span><input class="time-input" type="time" id="input-salida" onchange="recalcHint()"></div>
         </div>
       </div>
       <div class="section-title">Centro de costo principal</div>
@@ -266,38 +248,20 @@
           <div class="section-title">Horario del segundo centro</div>
           <div class="time-hint" id="time-hint2"></div>
           <div class="time-row" style="margin-top:8px">
-            <div class="time-group">
-              <span class="time-label">Entrada</span>
-              <input class="time-input" type="time" id="input-entrada2" onchange="recalcHint2()">
-            </div>
-            <div class="time-group">
-              <span class="time-label">Salida</span>
-              <input class="time-input" type="time" id="input-salida2" onchange="recalcHint2()">
-            </div>
+            <div class="time-group"><span class="time-label">Entrada</span><input class="time-input" type="time" id="input-entrada2" onchange="recalcHint2()"></div>
+            <div class="time-group"><span class="time-label">Salida</span><input class="time-input" type="time" id="input-salida2" onchange="recalcHint2()"></div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- SECCIÓN NOVEDAD -->
     <div id="seccion-novedad" style="display:none">
       <div class="section-title">Categoría de ausencia</div>
       <div class="novedad-grid">
-        <div class="novedad-opt" id="nov-vacaciones" onclick="selNovedad('vacaciones')">
-          <div class="novedad-icon">🏖️</div>
-          <div class="novedad-name">Vacaciones</div>
-        </div>
-        <div class="novedad-opt" id="nov-incapacidad" onclick="selNovedad('incapacidad')">
-          <div class="novedad-icon">🏥</div>
-          <div class="novedad-name">Incapacidad</div>
-        </div>
-        <div class="novedad-opt" id="nov-permiso" onclick="selNovedad('permiso')">
-          <div class="novedad-icon">📝</div>
-          <div class="novedad-name">Permiso</div>
-        </div>
+        <div class="novedad-opt" id="nov-vacaciones" onclick="selNovedad('vacaciones')"><div class="novedad-icon">🏖️</div><div class="novedad-name">Vacaciones</div></div>
+        <div class="novedad-opt" id="nov-incapacidad" onclick="selNovedad('incapacidad')"><div class="novedad-icon">🏥</div><div class="novedad-name">Incapacidad</div></div>
+        <div class="novedad-opt" id="nov-permiso" onclick="selNovedad('permiso')"><div class="novedad-icon">📝</div><div class="novedad-name">Permiso</div></div>
       </div>
     </div>
-
     <button class="btn btn-primary" onclick="saveAssignment()">✓ Guardar programación</button>
     <button class="btn btn-danger" id="btn-clear" onclick="clearAssignment()" style="display:none">✕ Quitar asignación</button>
   </div>
@@ -309,14 +273,8 @@
     <div class="modal-handle"></div>
     <div class="modal-title" id="modal-proyecto-title">Nuevo proyecto</div>
     <div class="modal-sub">Completa los datos del centro de costo</div>
-    <div class="form-group">
-      <label class="form-label">Código</label>
-      <input class="form-input" id="input-codigo" placeholder="Ej: 921" type="text">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Nombre del proyecto</label>
-      <input class="form-input" id="input-nombre" placeholder="Ej: SMART FIT LAURELES MDE" type="text">
-    </div>
+    <div class="form-group"><label class="form-label">Código</label><input class="form-input" id="input-codigo" placeholder="Ej: 921" type="text"></div>
+    <div class="form-group"><label class="form-label">Nombre del proyecto</label><input class="form-input" id="input-nombre" placeholder="Ej: SMART FIT LAURELES MDE" type="text"></div>
     <button class="btn btn-primary" onclick="guardarProyecto()">✓ Guardar proyecto</button>
   </div>
 </div>
@@ -327,68 +285,44 @@
     <div class="modal-handle"></div>
     <div class="modal-title">Nuevo colaborador</div>
     <div class="modal-sub">Ingresa el nombre completo</div>
-    <div class="form-group">
-      <label class="form-label">Nombre completo</label>
-      <input class="form-input" id="input-colab-nombre" placeholder="Ej: Juan Pérez Gómez" type="text">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Número de documento</label>
-      <input class="form-input" id="input-colab-documento" placeholder="Ej: 71.234.567-8" type="text">
-    </div>
+    <div class="form-group"><label class="form-label">Nombre completo</label><input class="form-input" id="input-colab-nombre" placeholder="Ej: Juan Pérez Gómez" type="text"></div>
+    <div class="form-group"><label class="form-label">Número de documento</label><input class="form-input" id="input-colab-documento" placeholder="Ej: 71.234.567-8" type="text"></div>
     <button class="btn btn-primary" onclick="guardarColaborador()">✓ Guardar colaborador</button>
   </div>
 </div>
 
-<!-- MODAL EXCEL RANGO DE FECHAS -->
+<!-- MODAL EXCEL -->
 <div class="modal-backdrop" id="modal-excel-rango" onclick="closeExcelRangoOutside(event)">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Exportar Excel</div>
     <div class="modal-sub">Selecciona el rango de fechas a incluir</div>
-    <div class="form-group">
-      <label class="form-label">Desde</label>
-      <input class="form-input" id="excel-desde" type="date">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Hasta</label>
-      <input class="form-input" id="excel-hasta" type="date">
-    </div>
+    <div class="form-group"><label class="form-label">Desde</label><input class="form-input" id="excel-desde" type="date"></div>
+    <div class="form-group"><label class="form-label">Hasta</label><input class="form-input" id="excel-hasta" type="date"></div>
     <button class="btn btn-primary" onclick="generarExcelRango()">✓ Generar Excel</button>
   </div>
 </div>
 
-<!-- MODAL REPORTE FIC -->
+<!-- MODAL FIC -->
 <div class="modal-backdrop" id="modal-fic" onclick="closeFICOutside(event)">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Reporte FIC</div>
     <div class="modal-sub">Colaboradores distintos por proyecto en el rango seleccionado</div>
-    <div class="form-group">
-      <label class="form-label">Desde</label>
-      <input class="form-input" id="fic-desde" type="date">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Hasta</label>
-      <input class="form-input" id="fic-hasta" type="date">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Centro de costos</label>
-      <select class="form-input" id="fic-centro"></select>
-    </div>
+    <div class="form-group"><label class="form-label">Desde</label><input class="form-input" id="fic-desde" type="date"></div>
+    <div class="form-group"><label class="form-label">Hasta</label><input class="form-input" id="fic-hasta" type="date"></div>
+    <div class="form-group"><label class="form-label">Centro de costos</label><select class="form-input" id="fic-centro"></select></div>
     <button class="btn btn-primary" onclick="generarFIC()">✓ Generar reporte FIC</button>
   </div>
 </div>
 
-<!-- MODAL REPETIR PROGRAMACIÓN -->
+<!-- MODAL REPETIR -->
 <div class="modal-backdrop" id="modal-repetir" onclick="closeRepetirOutside(event)">
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Repetir programación</div>
-    <div class="modal-sub" id="repetir-sub">Elige de qué día quieres copiar la programación</div>
-    <div class="form-group">
-      <label class="form-label">Copiar programación de</label>
-      <input class="form-input" id="repetir-origen" type="date">
-    </div>
+    <div class="modal-sub" id="repetir-sub"></div>
+    <div class="form-group"><label class="form-label">Copiar programación de</label><input class="form-input" id="repetir-origen" type="date"></div>
     <div class="form-group" style="display:flex;align-items:center;gap:8px">
       <input type="checkbox" id="repetir-sobrescribir" style="width:18px;height:18px">
       <label class="form-label" style="margin:0" for="repetir-sobrescribir">Sobrescribir si ya hay algo asignado hoy</label>
@@ -423,49 +357,47 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const SUPABASE_URL = 'https://nlmdzeguypchouqsdyzx.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sbWR6ZWd1eXBjaG91cXNkeXp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4OTMwODksImV4cCI6MjA5NzQ2OTA4OX0.vN9nOwldbRO_me2LlRR95rvD5IV10C7EOPpT3GC6zxM';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL='https://nlmdzeguypchouqsdyzx.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sbWR6ZWd1eXBjaG91cXNkeXp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4OTMwODksImV4cCI6MjA5NzQ2OTA4OX0.vN9nOwldbRO_me2LlRR95rvD5IV10C7EOPpT3GC6zxM';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-let colaboradores=[], colaboradoresTodos=[], centros=[], centrosTodos=[], turnos=[], programacion={};
-let currentDate=new Date(), currentMonth=new Date();
-let currentColabIdx=null, splitOn=false, selShift=null, selCC=null, selCC2=null;
-let tipoAsignacion='proyecto', selNovedad_val=null;
-let proyFilter='todos', colabFilter='todos', progMode='colab';
-let apProjectId=null, apShift=null, apChecked=new Set();
+let colaboradores=[],colaboradoresTodos=[],centros=[],centrosTodos=[],turnos=[],programacion={};
+let currentDate=new Date(),currentMonth=new Date();
+let currentColabIdx=null,splitOn=false,selShift=null,selCC=null,selCC2=null;
+let tipoAsignacion='proyecto',selNovedad_val=null;
+let proyFilter='todos',colabFilter='todos',progMode='colab';
+let apProjectId=null,apShift=null,apChecked=new Set();
 const AVC=['av0','av1','av2','av3','av4','av5'];
 const MONTHS=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const DAYS=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const DAYS_S=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
 
-// Horario Normal según día de semana
-// 0=Dom,1=Lun,2=Mar,3=Mié,4=Jue,5=Vie,6=Sáb
 function horarioNormal(fecha){
   const dia=fecha.getDay();
-  if(dia===5) return {entrada:'07:00', salida:'13:15', label:'Viernes: 7:00 - 1:15 p.m.'};
-  if(dia===6) return {entrada:'07:00', salida:'11:00', label:'Sábado: 7:00 - 11:00'};
-  if(dia===0) return {entrada:'07:00', salida:'16:00', label:'Domingo: 7:00 - 16:00'};
-  return {entrada:'07:00', salida:'16:00', label:'Lun-Jue: 7:00 - 16:00'};
+  if(dia===5)return{entrada:'07:00',salida:'13:15',label:'Viernes: 7:00 - 1:15 p.m.'};
+  if(dia===6)return{entrada:'07:00',salida:'11:00',label:'Sábado: 7:00 - 11:00'};
+  if(dia===0)return{entrada:'07:00',salida:'16:00',label:'Domingo: 7:00 - 16:00'};
+  return{entrada:'07:00',salida:'16:00',label:'Lun-Jue: 7:00 - 16:00'};
 }
-
-function getTurnoNormal(){ return turnos.find(t=>t.nombre==='Normal'); }
-function getTurnoNocturno(){ return turnos.find(t=>t.nombre==='Nocturno'); }
-function isNormal(id){ const t=getTurnoNormal(); return t&&t.id===id; }
-function isNocturno(id){ const t=getTurnoNocturno(); return t&&t.id===id; }
-function isEditable(id){ return isNormal(id)||isNocturno(id); }
+function getTurnoNormal(){return turnos.find(t=>t.nombre==='Normal');}
+function getTurnoNocturno(){return turnos.find(t=>t.nombre==='Nocturno');}
+function isNormal(id){const t=getTurnoNormal();return t&&t.id===id;}
+function isNocturno(id){const t=getTurnoNocturno();return t&&t.id===id;}
+function isEditable(id){return isNormal(id)||isNocturno(id);}
 
 async function init(){
   updateDateLabels();
   try{
-    const [{data:c,error:e1},{data:cc,error:e2},{data:t,error:e3}]=await Promise.all([
+    const[{data:c,error:e1},{data:cc,error:e2},{data:t,error:e3}]=await Promise.all([
       sb.from('colaboradores').select('id,nombre,activo,documento').order('nombre'),
       sb.from('centros_costo').select('id,codigo,nombre,activo').order('codigo'),
       sb.from('turnos').select('*').eq('activo',true).order('id')
     ]);
-    if(e1) throw new Error('colaboradores: '+e1.message);
-    if(e2) throw new Error('centros_costo: '+e2.message);
-    if(e3) throw new Error('turnos: '+e3.message);
-    colaboradoresTodos=c||[]; colaboradores=colaboradoresTodos.filter(x=>x.activo); centrosTodos=cc||[]; centros=centrosTodos.filter(x=>x.activo);
+    if(e1)throw new Error('colaboradores: '+e1.message);
+    if(e2)throw new Error('centros_costo: '+e2.message);
+    if(e3)throw new Error('turnos: '+e3.message);
+    colaboradoresTodos=c||[];colaboradores=colaboradoresTodos.filter(x=>x.activo);
+    centrosTodos=cc||[];centros=centrosTodos.filter(x=>x.activo);
     const order={'Normal':0,'Nocturno':1};
     turnos=(t||[]).sort((a,b)=>(order[a.nombre]??9)-(order[b.nombre]??9));
     if(!colaboradores.length){showError('No se encontraron colaboradores.');return;}
@@ -473,12 +405,8 @@ async function init(){
   }catch(err){showError(err.message);}
 }
 
-function showError(msg){
-  document.getElementById('collab-list').innerHTML=`<div class="error-box"><div class="error-title">⚠️ Error</div><div class="error-msg">${msg}</div></div>`;
-}
-
+function showError(msg){document.getElementById('collab-list').innerHTML=`<div class="error-box"><div class="error-title">⚠️ Error</div><div class="error-msg">${msg}</div></div>`;}
 function dateKey(d){return d.toISOString().slice(0,10);}
-
 function updateDateLabels(){
   const d=currentDate;
   document.getElementById('date-label').textContent=DAYS_S[d.getDay()]+' '+d.getDate()+' '+MONTHS[d.getMonth()].slice(0,3);
@@ -493,36 +421,27 @@ async function loadProgramacion(){
   programacion={};
   (data||[]).forEach(r=>{programacion[r.colaborador_id]=r;});
   renderCollabs();
-  if(progMode==='proyecto') renderProyectoProg();
+  if(progMode==='proyecto')renderProyectoProg();
 }
 
 function getHorarioReal(asn){
-  if(!asn) return '';
-  if(asn.hora_entrada_custom && asn.hora_salida_custom)
-    return asn.hora_entrada_custom.slice(0,5)+' – '+asn.hora_salida_custom.slice(0,5);
+  if(!asn)return'';
+  if(asn.hora_entrada_custom&&asn.hora_salida_custom)return asn.hora_entrada_custom.slice(0,5)+' – '+asn.hora_salida_custom.slice(0,5);
   const turno=turnos.find(t=>t.id===asn.turno_id);
-  if(!turno) return '';
-  if(turno.nombre==='Normal'){
-    const h=horarioNormal(currentDate);
-    return h.entrada+' – '+h.salida;
-  }
+  if(!turno)return'';
+  if(turno.nombre==='Normal'){const h=horarioNormal(currentDate);return h.entrada+' – '+h.salida;}
   return turno.hora_entrada.slice(0,5)+' – '+turno.hora_salida.slice(0,5);
 }
-
 function getHorarioReal2(asn){
-  if(!asn) return '';
-  if(asn.hora_entrada_custom2 && asn.hora_salida_custom2)
-    return asn.hora_entrada_custom2.slice(0,5)+' – '+asn.hora_salida_custom2.slice(0,5);
+  if(!asn)return'';
+  if(asn.hora_entrada_custom2&&asn.hora_salida_custom2)return asn.hora_entrada_custom2.slice(0,5)+' – '+asn.hora_salida_custom2.slice(0,5);
   const turno=turnos.find(t=>t.id===asn.turno_id);
-  if(!turno) return '';
-  if(turno.nombre==='Normal'){
-    const h=horarioNormal(currentDate);
-    return h.entrada+' – '+h.salida;
-  }
+  if(!turno)return'';
+  if(turno.nombre==='Normal'){const h=horarioNormal(currentDate);return h.entrada+' – '+h.salida;}
   return turno.hora_entrada.slice(0,5)+' – '+turno.hora_salida.slice(0,5);
 }
 
-const NOVEDAD_LABEL={'vacaciones':'🏖️ Vacaciones','incapacidad':'🏥 Incapacidad','permiso':'📝 Permiso'};
+const NOVEDAD_LABEL={vacaciones:'🏖️ Vacaciones',incapacidad:'🏥 Incapacidad',permiso:'📝 Permiso'};
 
 function renderCollabs(){
   const prog=Object.keys(programacion).length;
@@ -533,11 +452,11 @@ function renderCollabs(){
   const cards=colaboradores.map((c,i)=>{
     const asn=programacion[c.id];
     const av=c.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    let ccLabel, badge, shiftTag='';
+    let ccLabel,badge,shiftTag='';
     if(asn&&asn.novedad){
       ccLabel=NOVEDAD_LABEL[asn.novedad]||asn.novedad;
       badge='<span class="badge badge-novedad">'+ccLabel+'</span>';
-    } else if(asn){
+    }else if(asn){
       const cc=centrosTodos.find(x=>x.id===asn.centro_costo_id);
       const cc2=asn.centro_costo_id2?centrosTodos.find(x=>x.id===asn.centro_costo_id2):null;
       const turno=turnos.find(x=>x.id===asn.turno_id);
@@ -545,20 +464,32 @@ function renderCollabs(){
       badge='<span class="badge badge-ok">✓ Listo</span>';
       const horario=getHorarioReal(asn);
       shiftTag=turno?`<div class="shift-tag">⏰ ${turno.nombre} ${cc?cc.codigo+' '+horario:horario}${cc2?' · '+cc2.codigo+' '+getHorarioReal2(asn):''}</div>`:'';
-    } else {
+    }else{
       ccLabel='Sin asignar';
       badge='<span class="badge badge-pending">Pendiente</span>';
     }
-    const html=`<div class="collab-card ${asn?'assigned':'pending'}" onclick="openModal(${i})">
+    return{nombre:c.nombre,idx:i,html:`<div class="collab-card ${asn?'assigned':'pending'}" id="card-colab-${i}" onclick="openModal(${i})">
       <div class="card-top">
         <div class="avatar ${AVC[i%6]}">${av}</div>
         <div class="card-info"><div class="card-name">${c.nombre}</div><div class="card-doc">CC ${c.documento||'—'}</div><div class="card-cc">${ccLabel}</div></div>
         ${badge}
-      </div>${shiftTag}</div>`;
-    return{nombre:c.nombre,html};
+      </div>${shiftTag}</div>`};
   });
   const filtrados=q?cards.filter(x=>x.nombre.toLowerCase().includes(q)):cards;
   document.getElementById('collab-list').innerHTML=filtrados.length?filtrados.map(x=>x.html).join(''):'<div class="empty">No hay colaboradores que coincidan</div>';
+}
+
+// ── SCROLL AL SIGUIENTE COLABORADOR ──────────────────────────────────
+function scrollToNext(savedIdx){
+  const nextIdx=savedIdx+1;
+  if(nextIdx>=colaboradores.length)return;
+  setTimeout(()=>{
+    const nextCard=document.getElementById('card-colab-'+nextIdx);
+    if(!nextCard)return;
+    nextCard.scrollIntoView({behavior:'smooth',block:'center'});
+    nextCard.classList.add('next-highlight');
+    setTimeout(()=>nextCard.classList.remove('next-highlight'),1500);
+  },300);
 }
 
 function changeDate(d){currentDate.setDate(currentDate.getDate()+d);updateDateLabels();loadProgramacion();}
@@ -567,12 +498,11 @@ function switchTab(t){
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',['prog','report','proyectos','equipo'][i]===t));
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+t).classList.add('active');
-  if(t==='report') loadReport();
-  if(t==='proyectos') renderProyectos();
-  if(t==='equipo') renderEquipo();
+  if(t==='report')loadReport();
+  if(t==='proyectos')renderProyectos();
+  if(t==='equipo')renderEquipo();
 }
 
-// ─── MODAL ASIGNACIÓN ───────────────────────────────────────────────
 function openModal(idx){
   currentColabIdx=idx;
   const c=colaboradores[idx];
@@ -590,35 +520,13 @@ function openModal(idx){
   document.getElementById('cc2-section').style.display=splitOn?'block':'none';
   document.getElementById('btn-clear').style.display=asn?'block':'none';
   document.getElementById('split-toggle').classList.toggle('on',splitOn);
-  if(asn&&asn.hora_entrada_custom){
-    document.getElementById('input-entrada').value=asn.hora_entrada_custom.slice(0,5);
-    document.getElementById('input-salida').value=asn.hora_salida_custom.slice(0,5);
-  } else if(isNocturno(selShift)){
-    const t=getTurnoNocturno();
-    document.getElementById('input-entrada').value=t?t.hora_entrada.slice(0,5):'21:00';
-    document.getElementById('input-salida').value=t?t.hora_salida.slice(0,5):'06:00';
-  } else {
-    const h=horarioNormal(currentDate);
-    document.getElementById('input-entrada').value=h.entrada;
-    document.getElementById('input-salida').value=h.salida;
-  }
-  if(asn&&asn.hora_entrada_custom2){
-    document.getElementById('input-entrada2').value=asn.hora_entrada_custom2.slice(0,5);
-    document.getElementById('input-salida2').value=asn.hora_salida_custom2.slice(0,5);
-  } else if(isNocturno(selShift)){
-    const t=getTurnoNocturno();
-    document.getElementById('input-entrada2').value=t?t.hora_entrada.slice(0,5):'21:00';
-    document.getElementById('input-salida2').value=t?t.hora_salida.slice(0,5):'06:00';
-  } else {
-    const h=horarioNormal(currentDate);
-    document.getElementById('input-entrada2').value=h.entrada;
-    document.getElementById('input-salida2').value=h.salida;
-  }
-  setTipo(tipoAsignacion);
-  renderShifts();
-  updateHorarioSection();
-  updateHorarioSection2();
-  renderCCList(1);renderCCList(2);
+  if(asn&&asn.hora_entrada_custom){document.getElementById('input-entrada').value=asn.hora_entrada_custom.slice(0,5);document.getElementById('input-salida').value=asn.hora_salida_custom.slice(0,5);}
+  else if(isNocturno(selShift)){const t=getTurnoNocturno();document.getElementById('input-entrada').value=t?t.hora_entrada.slice(0,5):'21:00';document.getElementById('input-salida').value=t?t.hora_salida.slice(0,5):'06:00';}
+  else{const h=horarioNormal(currentDate);document.getElementById('input-entrada').value=h.entrada;document.getElementById('input-salida').value=h.salida;}
+  if(asn&&asn.hora_entrada_custom2){document.getElementById('input-entrada2').value=asn.hora_entrada_custom2.slice(0,5);document.getElementById('input-salida2').value=asn.hora_salida_custom2.slice(0,5);}
+  else if(isNocturno(selShift)){const t=getTurnoNocturno();document.getElementById('input-entrada2').value=t?t.hora_entrada.slice(0,5):'21:00';document.getElementById('input-salida2').value=t?t.hora_salida.slice(0,5):'06:00';}
+  else{const h=horarioNormal(currentDate);document.getElementById('input-entrada2').value=h.entrada;document.getElementById('input-salida2').value=h.salida;}
+  setTipo(tipoAsignacion);renderShifts();updateHorarioSection();updateHorarioSection2();renderCCList(1);renderCCList(2);
   document.getElementById('modal').classList.add('open');
 }
 
@@ -628,186 +536,75 @@ function setTipo(tipo){
   document.getElementById('tipo-novedad').classList.toggle('sel',tipo==='novedad');
   document.getElementById('seccion-proyecto').style.display=tipo==='proyecto'?'block':'none';
   document.getElementById('seccion-novedad').style.display=tipo==='novedad'?'block':'none';
-  if(tipo==='novedad') renderNovedadOpts();
+  if(tipo==='novedad')renderNovedadOpts();
 }
-
-function selNovedad(val){
-  selNovedad_val=val;
-  renderNovedadOpts();
-}
-
-function renderNovedadOpts(){
-  ['vacaciones','incapacidad','permiso'].forEach(n=>{
-    document.getElementById('nov-'+n).classList.toggle('sel',selNovedad_val===n);
-  });
-}
-
-function updateHorarioSection(){
-  const show=isEditable(selShift);
-  document.getElementById('horario-section').style.display=show?'block':'none';
-  if(show) recalcHint();
-}
-
-function updateHorarioSection2(){
-  const show=splitOn&&isEditable(selShift);
-  document.getElementById('horario-section2').style.display=show?'block':'none';
-  if(show) recalcHint2();
-}
-
-function recalcHint2(){
-  let defaultEntrada, defaultSalida, label;
-  if(isNormal(selShift)){
-    const h=horarioNormal(currentDate);
-    defaultEntrada=h.entrada; defaultSalida=h.salida; label=h.label;
-  } else {
-    const t=getTurnoNocturno();
-    defaultEntrada=t?t.hora_entrada.slice(0,5):'21:00';
-    defaultSalida=t?t.hora_salida.slice(0,5):'06:00';
-    label='Nocturno: '+defaultEntrada+' - '+defaultSalida;
-  }
-  const entrada=document.getElementById('input-entrada2').value;
-  const salida=document.getElementById('input-salida2').value;
-  const esDefault=entrada===defaultEntrada&&salida===defaultSalida;
-  document.getElementById('time-hint2').textContent=esDefault
-    ? '⏰ Horario por defecto: '+label
-    : '✏️ Horario modificado para este colaborador';
-}
-
+function selNovedad(val){selNovedad_val=val;renderNovedadOpts();}
+function renderNovedadOpts(){['vacaciones','incapacidad','permiso'].forEach(n=>document.getElementById('nov-'+n).classList.toggle('sel',selNovedad_val===n));}
+function updateHorarioSection(){const show=isEditable(selShift);document.getElementById('horario-section').style.display=show?'block':'none';if(show)recalcHint();}
+function updateHorarioSection2(){const show=splitOn&&isEditable(selShift);document.getElementById('horario-section2').style.display=show?'block':'none';if(show)recalcHint2();}
 function recalcHint(){
-  let defaultEntrada, defaultSalida, label;
-  if(isNormal(selShift)){
-    const h=horarioNormal(currentDate);
-    defaultEntrada=h.entrada; defaultSalida=h.salida; label=h.label;
-  } else {
-    const t=getTurnoNocturno();
-    defaultEntrada=t?t.hora_entrada.slice(0,5):'21:00';
-    defaultSalida=t?t.hora_salida.slice(0,5):'06:00';
-    label='Nocturno: '+defaultEntrada+' - '+defaultSalida;
-  }
-  const entrada=document.getElementById('input-entrada').value;
-  const salida=document.getElementById('input-salida').value;
-  const esDefault=entrada===defaultEntrada&&salida===defaultSalida;
-  document.getElementById('time-hint').textContent=esDefault
-    ? '⏰ Horario por defecto: '+label
-    : '✏️ Horario modificado para este colaborador';
+  let de,ds,label;
+  if(isNormal(selShift)){const h=horarioNormal(currentDate);de=h.entrada;ds=h.salida;label=h.label;}
+  else{const t=getTurnoNocturno();de=t?t.hora_entrada.slice(0,5):'21:00';ds=t?t.hora_salida.slice(0,5):'06:00';label='Nocturno: '+de+' - '+ds;}
+  const e=document.getElementById('input-entrada').value,s=document.getElementById('input-salida').value;
+  document.getElementById('time-hint').textContent=(e===de&&s===ds)?'⏰ Horario por defecto: '+label:'✏️ Horario modificado para este colaborador';
 }
-
+function recalcHint2(){
+  let de,ds,label;
+  if(isNormal(selShift)){const h=horarioNormal(currentDate);de=h.entrada;ds=h.salida;label=h.label;}
+  else{const t=getTurnoNocturno();de=t?t.hora_entrada.slice(0,5):'21:00';ds=t?t.hora_salida.slice(0,5):'06:00';label='Nocturno: '+de+' - '+ds;}
+  const e=document.getElementById('input-entrada2').value,s=document.getElementById('input-salida2').value;
+  document.getElementById('time-hint2').textContent=(e===de&&s===ds)?'⏰ Horario por defecto: '+label:'✏️ Horario modificado para este colaborador';
+}
 function closeModalOutside(e){if(e.target===document.getElementById('modal'))closeModal();}
 function closeModal(){document.getElementById('modal').classList.remove('open');}
-
 function renderShifts(){
   document.getElementById('shift-grid').innerHTML=turnos.map(t=>{
-    let timeLabel='';
-    if(t.nombre==='Normal'){
-      const h=horarioNormal(currentDate);
-      timeLabel=h.entrada+' – '+h.salida;
-    } else {
-      timeLabel=t.hora_entrada.slice(0,5)+' – '+t.hora_salida.slice(0,5);
-    }
-    return `<div class="shift-opt ${t.id===selShift?'sel':''}" onclick="selShiftFn(${t.id})">
-      <div class="shift-opt-name">${t.nombre}</div>
-      <div class="shift-opt-time">${timeLabel}</div>
-    </div>`;
+    let tl=t.nombre==='Normal'?(horarioNormal(currentDate).entrada+' – '+horarioNormal(currentDate).salida):(t.hora_entrada.slice(0,5)+' – '+t.hora_salida.slice(0,5));
+    return`<div class="shift-opt ${t.id===selShift?'sel':''}" onclick="selShiftFn(${t.id})"><div class="shift-opt-name">${t.nombre}</div><div class="shift-opt-time">${tl}</div></div>`;
   }).join('');
 }
-
 function selShiftFn(id){
-  selShift=id;
-  renderShifts();
-  updateHorarioSection();
-  updateHorarioSection2();
-  // Reset horario al default si cambia a turno editable
-  if(isNormal(id)){
-    const h=horarioNormal(currentDate);
-    document.getElementById('input-entrada').value=h.entrada;
-    document.getElementById('input-salida').value=h.salida;
-    document.getElementById('input-entrada2').value=h.entrada;
-    document.getElementById('input-salida2').value=h.salida;
-    recalcHint();recalcHint2();
-  } else if(isNocturno(id)){
-    const t=getTurnoNocturno();
-    const e=t?t.hora_entrada.slice(0,5):'21:00', s=t?t.hora_salida.slice(0,5):'06:00';
-    document.getElementById('input-entrada').value=e;
-    document.getElementById('input-salida').value=s;
-    document.getElementById('input-entrada2').value=e;
-    document.getElementById('input-salida2').value=s;
-    recalcHint();recalcHint2();
-  }
+  selShift=id;renderShifts();updateHorarioSection();updateHorarioSection2();
+  if(isNormal(id)){const h=horarioNormal(currentDate);document.getElementById('input-entrada').value=h.entrada;document.getElementById('input-salida').value=h.salida;document.getElementById('input-entrada2').value=h.entrada;document.getElementById('input-salida2').value=h.salida;recalcHint();recalcHint2();}
+  else if(isNocturno(id)){const t=getTurnoNocturno();const e=t?t.hora_entrada.slice(0,5):'21:00',s=t?t.hora_salida.slice(0,5):'06:00';document.getElementById('input-entrada').value=e;document.getElementById('input-salida').value=s;document.getElementById('input-entrada2').value=e;document.getElementById('input-salida2').value=s;recalcHint();recalcHint2();}
 }
-
 function renderCCList(n){
   const q=(document.getElementById(n===1?'cc-search':'cc-search2').value||'').toLowerCase();
   const excl=n===2?selCC:null;
-  const filtered=centros.filter(c=>(!excl||c.id!==excl)&&(c.codigo.toLowerCase().includes(q)||c.nombre.toLowerCase().includes(q)))
-    .sort((a,b)=>b.codigo.localeCompare(a.codigo,undefined,{numeric:true})).slice(0,80);
+  const filtered=centros.filter(c=>(!excl||c.id!==excl)&&(c.codigo.toLowerCase().includes(q)||c.nombre.toLowerCase().includes(q))).sort((a,b)=>b.codigo.localeCompare(a.codigo,undefined,{numeric:true})).slice(0,80);
   const selId=n===1?selCC:selCC2;
-  document.getElementById('cc-list-'+n).innerHTML=filtered.map(c=>`
-    <div class="cc-item ${c.id===selId?'sel':''}" onclick="selCCFn(${n},${c.id})">
-      <span class="cc-code">${c.codigo}</span><span>${c.nombre}</span>
-    </div>`).join('')||'<div style="padding:12px;text-align:center;font-size:13px;color:#9CA3AF">Sin resultados</div>';
+  document.getElementById('cc-list-'+n).innerHTML=filtered.map(c=>`<div class="cc-item ${c.id===selId?'sel':''}" onclick="selCCFn(${n},${c.id})"><span class="cc-code">${c.codigo}</span><span>${c.nombre}</span></div>`).join('')||'<div style="padding:12px;text-align:center;font-size:13px;color:#9CA3AF">Sin resultados</div>';
 }
-function selCCFn(n,id){
-  if(n===1){selCC=id;renderCCList(1);renderCCList(2);}
-  else{selCC2=id;renderCCList(2);}
-}
-function toggleSplit(){
-  splitOn=!splitOn;
-  document.getElementById('split-toggle').classList.toggle('on',splitOn);
-  document.getElementById('cc2-section').style.display=splitOn?'block':'none';
-  if(!splitOn)selCC2=null;
-  updateHorarioSection2();
-}
+function selCCFn(n,id){if(n===1){selCC=id;renderCCList(1);renderCCList(2);}else{selCC2=id;renderCCList(2);}}
+function toggleSplit(){splitOn=!splitOn;document.getElementById('split-toggle').classList.toggle('on',splitOn);document.getElementById('cc2-section').style.display=splitOn?'block':'none';if(!splitOn)selCC2=null;updateHorarioSection2();}
 
 async function saveAssignment(){
   const c=colaboradores[currentColabIdx];
+  const savedIdx=currentColabIdx; // ← Guardar índice ANTES de cerrar
   const key=dateKey(currentDate);
   let payload;
-
   if(tipoAsignacion==='novedad'){
     if(!selNovedad_val){showToast('Selecciona una categoría de ausencia');return;}
-    payload={fecha:key,colaborador_id:c.id,novedad:selNovedad_val,
-      turno_id:null,centro_costo_id:null,centro_costo_id2:null,
-      hora_entrada_custom:null,hora_salida_custom:null,
-      hora_entrada_custom2:null,hora_salida_custom2:null};
-  } else {
+    payload={fecha:key,colaborador_id:c.id,novedad:selNovedad_val,turno_id:null,centro_costo_id:null,centro_costo_id2:null,hora_entrada_custom:null,hora_salida_custom:null,hora_entrada_custom2:null,hora_salida_custom2:null};
+  }else{
     if(!selShift||!selCC){showToast('Selecciona turno y centro de costo');return;}
-    let defaultEntrada, defaultSalida;
-    if(isNormal(selShift)){
-      const h=horarioNormal(currentDate);
-      defaultEntrada=h.entrada; defaultSalida=h.salida;
-    } else {
-      const t=getTurnoNocturno();
-      defaultEntrada=t?t.hora_entrada.slice(0,5):'21:00';
-      defaultSalida=t?t.hora_salida.slice(0,5):'06:00';
-    }
-    let hora_entrada_custom=null, hora_salida_custom=null;
-    if(isEditable(selShift)){
-      const entrada=document.getElementById('input-entrada').value;
-      const salida=document.getElementById('input-salida').value;
-      if(entrada!==defaultEntrada||salida!==defaultSalida){
-        hora_entrada_custom=entrada; hora_salida_custom=salida;
-      }
-    }
-    let hora_entrada_custom2=null, hora_salida_custom2=null;
-    if(splitOn&&isEditable(selShift)){
-      const entrada2=document.getElementById('input-entrada2').value;
-      const salida2=document.getElementById('input-salida2').value;
-      if(entrada2!==defaultEntrada||salida2!==defaultSalida){
-        hora_entrada_custom2=entrada2; hora_salida_custom2=salida2;
-      }
-    }
-    payload={fecha:key,colaborador_id:c.id,turno_id:selShift,centro_costo_id:selCC,
-      centro_costo_id2:splitOn?selCC2:null,hora_entrada_custom,hora_salida_custom,
-      hora_entrada_custom2,hora_salida_custom2,novedad:null};
+    let de,ds;
+    if(isNormal(selShift)){const h=horarioNormal(currentDate);de=h.entrada;ds=h.salida;}
+    else{const t=getTurnoNocturno();de=t?t.hora_entrada.slice(0,5):'21:00';ds=t?t.hora_salida.slice(0,5):'06:00';}
+    let hec=null,hsc=null;
+    if(isEditable(selShift)){const e=document.getElementById('input-entrada').value,s=document.getElementById('input-salida').value;if(e!==de||s!==ds){hec=e;hsc=s;}}
+    let hec2=null,hsc2=null;
+    if(splitOn&&isEditable(selShift)){const e2=document.getElementById('input-entrada2').value,s2=document.getElementById('input-salida2').value;if(e2!==de||s2!==ds){hec2=e2;hsc2=s2;}}
+    payload={fecha:key,colaborador_id:c.id,turno_id:selShift,centro_costo_id:selCC,centro_costo_id2:splitOn?selCC2:null,hora_entrada_custom:hec,hora_salida_custom:hsc,hora_entrada_custom2:hec2,hora_salida_custom2:hsc2,novedad:null};
   }
-
   const existing=programacion[c.id];
-  const{error}=existing
-    ?await sb.from('programacion').update(payload).eq('id',existing.id)
-    :await sb.from('programacion').insert(payload);
+  const{error}=existing?await sb.from('programacion').update(payload).eq('id',existing.id):await sb.from('programacion').insert(payload);
   if(error){showToast('Error: '+error.message);return;}
-  closeModal();showToast('✓ '+c.nombre.split(' ')[0]+' programado');
+  closeModal();
+  showToast('✓ '+c.nombre.split(' ')[0]+' programado');
   await loadProgramacion();
+  scrollToNext(savedIdx); // ← Scroll al siguiente
 }
 
 async function clearAssignment(){
@@ -820,753 +617,194 @@ async function clearAssignment(){
   await loadProgramacion();
 }
 
-// ─── GESTIÓN DE PROYECTOS ────────────────────────────────────────────
-function setFilter(f){
-  proyFilter=f;
-  ['todos','activos','inactivos'].forEach(x=>document.getElementById('filter-'+x).classList.toggle('active',x===f));
-  renderProyectos();
-}
+// PROYECTOS
+function setFilter(f){proyFilter=f;['todos','activos','inactivos'].forEach(x=>document.getElementById('filter-'+x).classList.toggle('active',x===f));renderProyectos();}
 function renderProyectos(){
   const q=(document.getElementById('proj-search').value||'').toLowerCase();
-  const lista=centrosTodos.filter(c=>{
-    const matchQ=c.codigo.toLowerCase().includes(q)||c.nombre.toLowerCase().includes(q);
-    const matchF=proyFilter==='todos'||(proyFilter==='activos'&&c.activo)||(proyFilter==='inactivos'&&!c.activo);
-    return matchQ&&matchF;
-  });
+  const lista=centrosTodos.filter(c=>{const mq=c.codigo.toLowerCase().includes(q)||c.nombre.toLowerCase().includes(q);const mf=proyFilter==='todos'||(proyFilter==='activos'&&c.activo)||(proyFilter==='inactivos'&&!c.activo);return mq&&mf;});
   if(!lista.length){document.getElementById('proj-list').innerHTML='<div class="empty">No hay proyectos que coincidan</div>';return;}
   lista.sort((a,b)=>b.codigo.localeCompare(a.codigo,undefined,{numeric:true}));
-  document.getElementById('proj-list').innerHTML=lista.map(c=>`
-    <div class="proj-card ${c.activo?'':'inactive'}">
-      <div class="proj-info">
-        <div class="proj-code">${c.codigo}</div>
-        <div class="proj-name">${c.nombre}</div>
-      </div>
-      <div class="proj-actions">
-        <button class="icon-btn" onclick="abrirEditarProyecto(${c.id})" title="Editar">✏️</button>
-        <button class="icon-btn danger" onclick="eliminarProyecto(${c.id})" title="Eliminar">🗑️</button>
-        <button class="proj-toggle ${c.activo?'on':''}" onclick="toggleProyecto(${c.id},${c.activo})"></button>
-      </div>
-    </div>`).join('');
+  document.getElementById('proj-list').innerHTML=lista.map(c=>`<div class="proj-card ${c.activo?'':'inactive'}"><div class="proj-info"><div class="proj-code">${c.codigo}</div><div class="proj-name">${c.nombre}</div></div><div class="proj-actions"><button class="icon-btn" onclick="abrirEditarProyecto(${c.id})">✏️</button><button class="icon-btn danger" onclick="eliminarProyecto(${c.id})">🗑️</button><button class="proj-toggle ${c.activo?'on':''}" onclick="toggleProyecto(${c.id},${c.activo})"></button></div></div>`).join('');
 }
-async function toggleProyecto(id,activo){
-  const{error}=await sb.from('centros_costo').update({activo:!activo}).eq('id',id);
-  if(error){showToast('Error: '+error.message);return;}
-  const idx=centrosTodos.findIndex(c=>c.id===id);
-  if(idx>=0)centrosTodos[idx].activo=!activo;
-  centros=centrosTodos.filter(x=>x.activo);
-  renderProyectos();
-  showToast(activo?'Proyecto desactivado':'Proyecto activado');
-}
+async function toggleProyecto(id,activo){const{error}=await sb.from('centros_costo').update({activo:!activo}).eq('id',id);if(error){showToast('Error: '+error.message);return;}const idx=centrosTodos.findIndex(c=>c.id===id);if(idx>=0)centrosTodos[idx].activo=!activo;centros=centrosTodos.filter(x=>x.activo);renderProyectos();showToast(activo?'Proyecto desactivado':'Proyecto activado');}
 let editandoProyectoId=null;
-function openNuevoProyecto(){
-  editandoProyectoId=null;
-  document.getElementById('modal-proyecto-title').textContent='Nuevo proyecto';
-  document.getElementById('input-codigo').value='';
-  document.getElementById('input-nombre').value='';
-  document.getElementById('modal-proyecto').classList.add('open');
-  setTimeout(()=>document.getElementById('input-codigo').focus(),300);
-}
-function abrirEditarProyecto(id){
-  const c=centrosTodos.find(x=>x.id===id);
-  if(!c)return;
-  editandoProyectoId=id;
-  document.getElementById('modal-proyecto-title').textContent='Editar proyecto';
-  document.getElementById('input-codigo').value=c.codigo;
-  document.getElementById('input-nombre').value=c.nombre;
-  document.getElementById('modal-proyecto').classList.add('open');
-  setTimeout(()=>document.getElementById('input-codigo').focus(),300);
-}
+function openNuevoProyecto(){editandoProyectoId=null;document.getElementById('modal-proyecto-title').textContent='Nuevo proyecto';document.getElementById('input-codigo').value='';document.getElementById('input-nombre').value='';document.getElementById('modal-proyecto').classList.add('open');setTimeout(()=>document.getElementById('input-codigo').focus(),300);}
+function abrirEditarProyecto(id){const c=centrosTodos.find(x=>x.id===id);if(!c)return;editandoProyectoId=id;document.getElementById('modal-proyecto-title').textContent='Editar proyecto';document.getElementById('input-codigo').value=c.codigo;document.getElementById('input-nombre').value=c.nombre;document.getElementById('modal-proyecto').classList.add('open');setTimeout(()=>document.getElementById('input-codigo').focus(),300);}
 function closeProyectoOutside(e){if(e.target===document.getElementById('modal-proyecto'))document.getElementById('modal-proyecto').classList.remove('open');}
 async function guardarProyecto(){
   const codigo=document.getElementById('input-codigo').value.trim();
   const nombre=document.getElementById('input-nombre').value.trim().toUpperCase();
   if(!codigo||!nombre){showToast('Completa código y nombre');return;}
-
-  if(editandoProyectoId){
-    const{data,error}=await sb.from('centros_costo').update({codigo,nombre}).eq('id',editandoProyectoId).select().single();
-    if(error){showToast('Error: '+error.message);return;}
-    const idx=centrosTodos.findIndex(c=>c.id===editandoProyectoId);
-    if(idx>=0)centrosTodos[idx]=data;
-    centrosTodos.sort((a,b)=>a.codigo.localeCompare(b.codigo));
-    centros=centrosTodos.filter(x=>x.activo);
-    document.getElementById('modal-proyecto').classList.remove('open');
-    renderProyectos();
-    showToast('✓ Proyecto '+codigo+' actualizado');
-    return;
-  }
-
-  const{data,error}=await sb.from('centros_costo').insert({codigo,nombre,activo:true}).select().single();
-  if(error){showToast('Error: '+error.message);return;}
-  centrosTodos.push(data);
-  centrosTodos.sort((a,b)=>a.codigo.localeCompare(b.codigo));
-  centros=centrosTodos.filter(x=>x.activo);
-  document.getElementById('modal-proyecto').classList.remove('open');
-  renderProyectos();
-  showToast('✓ Proyecto '+codigo+' agregado');
+  if(editandoProyectoId){const{data,error}=await sb.from('centros_costo').update({codigo,nombre}).eq('id',editandoProyectoId).select().single();if(error){showToast('Error: '+error.message);return;}const idx=centrosTodos.findIndex(c=>c.id===editandoProyectoId);if(idx>=0)centrosTodos[idx]=data;centrosTodos.sort((a,b)=>a.codigo.localeCompare(b.codigo));centros=centrosTodos.filter(x=>x.activo);document.getElementById('modal-proyecto').classList.remove('open');renderProyectos();showToast('✓ Proyecto '+codigo+' actualizado');return;}
+  const{data,error}=await sb.from('centros_costo').insert({codigo,nombre,activo:true}).select().single();if(error){showToast('Error: '+error.message);return;}centrosTodos.push(data);centrosTodos.sort((a,b)=>a.codigo.localeCompare(b.codigo));centros=centrosTodos.filter(x=>x.activo);document.getElementById('modal-proyecto').classList.remove('open');renderProyectos();showToast('✓ Proyecto '+codigo+' agregado');
 }
-async function eliminarProyecto(id){
-  const c=centrosTodos.find(x=>x.id===id);
-  if(!c)return;
-  if(!confirm('¿Eliminar el proyecto '+c.codigo+' - '+c.nombre+'? Esto no se puede deshacer.'))return;
-  const{error}=await sb.from('centros_costo').delete().eq('id',id);
-  if(error){
-    if(error.message.includes('foreign key')||error.code==='23503'){
-      showToast('No se puede eliminar: ya tiene programación asociada. Desactívalo en su lugar.');
-    }else{
-      showToast('Error: '+error.message);
-    }
-    return;
-  }
-  centrosTodos=centrosTodos.filter(x=>x.id!==id);
-  centros=centrosTodos.filter(x=>x.activo);
-  renderProyectos();
-  showToast('✓ Proyecto '+c.codigo+' eliminado');
-}
+async function eliminarProyecto(id){const c=centrosTodos.find(x=>x.id===id);if(!c)return;if(!confirm('¿Eliminar el proyecto '+c.codigo+' - '+c.nombre+'?'))return;const{error}=await sb.from('centros_costo').delete().eq('id',id);if(error){showToast(error.code==='23503'?'No se puede eliminar: tiene programación asociada. Desactívalo.':'Error: '+error.message);return;}centrosTodos=centrosTodos.filter(x=>x.id!==id);centros=centrosTodos.filter(x=>x.activo);renderProyectos();showToast('✓ Proyecto eliminado');}
 
-// ─── EQUIPO ──────────────────────────────────────────────────────────
-function setEFilter(f){
-  colabFilter=f;
-  ['todos','activos','inactivos'].forEach(x=>document.getElementById('efilter-'+x).classList.toggle('active',x===f));
-  renderEquipo();
-}
+// EQUIPO
+function setEFilter(f){colabFilter=f;['todos','activos','inactivos'].forEach(x=>document.getElementById('efilter-'+x).classList.toggle('active',x===f));renderEquipo();}
 function renderEquipo(){
   const q=(document.getElementById('equipo-search').value||'').toLowerCase();
-  const lista=colaboradoresTodos.filter(c=>{
-    const matchQ=c.nombre.toLowerCase().includes(q)||(c.documento||'').toLowerCase().includes(q);
-    const matchF=colabFilter==='todos'||(colabFilter==='activos'&&c.activo)||(colabFilter==='inactivos'&&!c.activo);
-    return matchQ&&matchF;
-  });
+  const lista=colaboradoresTodos.filter(c=>{const mq=c.nombre.toLowerCase().includes(q)||(c.documento||'').toLowerCase().includes(q);const mf=colabFilter==='todos'||(colabFilter==='activos'&&c.activo)||(colabFilter==='inactivos'&&!c.activo);return mq&&mf;});
   if(!lista.length){document.getElementById('equipo-list').innerHTML='<div class="empty">No hay colaboradores que coincidan</div>';return;}
-  document.getElementById('equipo-list').innerHTML=lista.map((c,i)=>{
-    const av=c.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
-    return `<div class="proj-card ${c.activo?'':'inactive'}">
-      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
-        <div class="avatar ${AVC[i%6]}" style="flex-shrink:0">${av}</div>
-        <div class="proj-info" style="margin-right:0">
-          <div class="proj-name" style="margin-top:0">${c.nombre}</div>
-          <div class="card-doc">CC ${c.documento||'—'}</div>
-        </div>
-      </div>
-      <div class="proj-actions">
-        ${c.activo?'':'<button class="icon-btn danger" onclick="eliminarColaborador('+c.id+')" title="Eliminar">🗑️</button>'}
-        <button class="proj-toggle ${c.activo?'on':''}" onclick="toggleColaborador(${c.id},${c.activo})"></button>
-      </div>
-    </div>`;
-  }).join('');
+  document.getElementById('equipo-list').innerHTML=lista.map((c,i)=>{const av=c.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();return`<div class="proj-card ${c.activo?'':'inactive'}"><div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0"><div class="avatar ${AVC[i%6]}" style="flex-shrink:0">${av}</div><div class="proj-info" style="margin-right:0"><div class="proj-name" style="margin-top:0">${c.nombre}</div><div class="card-doc">CC ${c.documento||'—'}</div></div></div><div class="proj-actions">${c.activo?'':'<button class="icon-btn danger" onclick="eliminarColaborador('+c.id+')">🗑️</button>'}<button class="proj-toggle ${c.activo?'on':''}" onclick="toggleColaborador(${c.id},${c.activo})"></button></div></div>`;}).join('');
 }
-function openNuevoColaborador(){
-  document.getElementById('input-colab-nombre').value='';
-  document.getElementById('input-colab-documento').value='';
-  document.getElementById('modal-colaborador').classList.add('open');
-  setTimeout(()=>document.getElementById('input-colab-nombre').focus(),300);
-}
+function openNuevoColaborador(){document.getElementById('input-colab-nombre').value='';document.getElementById('input-colab-documento').value='';document.getElementById('modal-colaborador').classList.add('open');setTimeout(()=>document.getElementById('input-colab-nombre').focus(),300);}
 function closeColaboradorOutside(e){if(e.target===document.getElementById('modal-colaborador'))document.getElementById('modal-colaborador').classList.remove('open');}
-async function guardarColaborador(){
-  const nombre=document.getElementById('input-colab-nombre').value.trim();
-  const documento=document.getElementById('input-colab-documento').value.trim();
-  if(!nombre){showToast('Ingresa el nombre del colaborador');return;}
-  const{data,error}=await sb.from('colaboradores').insert({nombre,documento:documento||null,activo:true}).select().single();
-  if(error){showToast('Error: '+error.message);return;}
-  colaboradoresTodos.push(data);
-  colaboradoresTodos.sort((a,b)=>a.nombre.localeCompare(b.nombre));
-  colaboradores=colaboradoresTodos.filter(x=>x.activo);
-  document.getElementById('modal-colaborador').classList.remove('open');
-  renderEquipo();
-  showToast('✓ '+nombre.split(' ')[0]+' agregado al equipo');
-}
-async function toggleColaborador(id,activo){
-  const{error}=await sb.from('colaboradores').update({activo:!activo}).eq('id',id);
-  if(error){showToast('Error: '+error.message);return;}
-  const idx=colaboradoresTodos.findIndex(c=>c.id===id);
-  if(idx>=0)colaboradoresTodos[idx].activo=!activo;
-  colaboradores=colaboradoresTodos.filter(x=>x.activo);
-  renderEquipo();
-  showToast(activo?'Colaborador desactivado (se conserva su historial)':'Colaborador reactivado');
-}
-async function eliminarColaborador(id){
-  const c=colaboradoresTodos.find(x=>x.id===id);
-  if(!c)return;
-  if(!confirm('¿Eliminar definitivamente a '+c.nombre+'? Esto no se puede deshacer.'))return;
-  const{error}=await sb.from('colaboradores').delete().eq('id',id);
-  if(error){
-    if(error.message.includes('foreign key')||error.code==='23503'){
-      showToast('No se puede eliminar: ya tiene programación asociada. Déjalo deshabilitado.');
-    }else{
-      showToast('Error: '+error.message);
-    }
-    return;
-  }
-  colaboradoresTodos=colaboradoresTodos.filter(x=>x.id!==id);
-  colaboradores=colaboradoresTodos.filter(x=>x.activo);
-  renderEquipo();
-  showToast('✓ '+c.nombre+' eliminado');
-}
+async function guardarColaborador(){const nombre=document.getElementById('input-colab-nombre').value.trim();const documento=document.getElementById('input-colab-documento').value.trim();if(!nombre){showToast('Ingresa el nombre del colaborador');return;}const{data,error}=await sb.from('colaboradores').insert({nombre,documento:documento||null,activo:true}).select().single();if(error){showToast('Error: '+error.message);return;}colaboradoresTodos.push(data);colaboradoresTodos.sort((a,b)=>a.nombre.localeCompare(b.nombre));colaboradores=colaboradoresTodos.filter(x=>x.activo);document.getElementById('modal-colaborador').classList.remove('open');renderEquipo();showToast('✓ '+nombre.split(' ')[0]+' agregado al equipo');}
+async function toggleColaborador(id,activo){const{error}=await sb.from('colaboradores').update({activo:!activo}).eq('id',id);if(error){showToast('Error: '+error.message);return;}const idx=colaboradoresTodos.findIndex(c=>c.id===id);if(idx>=0)colaboradoresTodos[idx].activo=!activo;colaboradores=colaboradoresTodos.filter(x=>x.activo);renderEquipo();showToast(activo?'Colaborador desactivado (se conserva su historial)':'Colaborador reactivado');}
+async function eliminarColaborador(id){const c=colaboradoresTodos.find(x=>x.id===id);if(!c)return;if(!confirm('¿Eliminar definitivamente a '+c.nombre+'?'))return;const{error}=await sb.from('colaboradores').delete().eq('id',id);if(error){showToast(error.code==='23503'?'No se puede eliminar: tiene programación asociada. Déjalo deshabilitado.':'Error: '+error.message);return;}colaboradoresTodos=colaboradoresTodos.filter(x=>x.id!==id);colaboradores=colaboradoresTodos.filter(x=>x.activo);renderEquipo();showToast('✓ '+c.nombre+' eliminado');}
 
-// ─── EXPORTAR EXCEL POR RANGO DE FECHAS ─────────────────────────────
-function primerYUltimoDiaMes(){
-  const hoy=new Date();
-  const primero=new Date(hoy.getFullYear(),hoy.getMonth(),1);
-  const ultimo=new Date(hoy.getFullYear(),hoy.getMonth()+1,0);
-  return[dateKey(primero),dateKey(ultimo)];
-}
-function nombreColab(id){
-  const c=colaboradoresTodos.find(x=>x.id===id);
-  return c?c.nombre:'(colaborador eliminado)';
-}
-function documentoColab(id){
-  const c=colaboradoresTodos.find(x=>x.id===id);
-  return c?.documento||'';
-}
-function labelNovedad(n){
-  return{vacaciones:'Vacaciones',incapacidad:'Incapacidad',permiso:'Permiso'}[n]||n;
-}
-function openExcelRango(){
-  const[d1,d2]=primerYUltimoDiaMes();
-  document.getElementById('excel-desde').value=d1;
-  document.getElementById('excel-hasta').value=d2;
-  document.getElementById('modal-excel-rango').classList.add('open');
-}
+// EXCEL
+function primerYUltimoDiaMes(){const hoy=new Date();return[dateKey(new Date(hoy.getFullYear(),hoy.getMonth(),1)),dateKey(new Date(hoy.getFullYear(),hoy.getMonth()+1,0))];}
+function nombreColab(id){const c=colaboradoresTodos.find(x=>x.id===id);return c?c.nombre:'(eliminado)';}
+function documentoColab(id){const c=colaboradoresTodos.find(x=>x.id===id);return c?.documento||'';}
+function labelNovedad(n){return{vacaciones:'Vacaciones',incapacidad:'Incapacidad',permiso:'Permiso'}[n]||n;}
+function openExcelRango(){const[d1,d2]=primerYUltimoDiaMes();document.getElementById('excel-desde').value=d1;document.getElementById('excel-hasta').value=d2;document.getElementById('modal-excel-rango').classList.add('open');}
 function closeExcelRangoOutside(e){if(e.target===document.getElementById('modal-excel-rango'))document.getElementById('modal-excel-rango').classList.remove('open');}
 async function generarExcelRango(){
-  const desde=document.getElementById('excel-desde').value;
-  const hasta=document.getElementById('excel-hasta').value;
-  if(!desde||!hasta){showToast('Selecciona ambas fechas');return;}
-  if(desde>hasta){showToast('La fecha inicial debe ser menor a la final');return;}
-  showToast('Generando Excel...');
-  const{data,error}=await sb.from('programacion')
-    .select('fecha,colaborador_id,novedad,hora_entrada_custom,hora_salida_custom,hora_entrada_custom2,hora_salida_custom2,turno:turno_id(nombre,hora_entrada,hora_salida),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)')
-    .gte('fecha',desde).lte('fecha',hasta).order('fecha');
-  if(error){showToast('Error: '+error.message);return;}
-  if(!data||!data.length){showToast('No hay programación en ese rango');return;}
-
+  const desde=document.getElementById('excel-desde').value,hasta=document.getElementById('excel-hasta').value;
+  if(!desde||!hasta){showToast('Selecciona ambas fechas');return;}if(desde>hasta){showToast('Fecha inicial debe ser menor');return;}showToast('Generando Excel...');
+  const{data,error}=await sb.from('programacion').select('fecha,colaborador_id,novedad,hora_entrada_custom,hora_salida_custom,hora_entrada_custom2,hora_salida_custom2,turno:turno_id(nombre,hora_entrada,hora_salida),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').gte('fecha',desde).lte('fecha',hasta).order('fecha');
+  if(error){showToast('Error: '+error.message);return;}if(!data||!data.length){showToast('No hay programación en ese rango');return;}
   const rows=[];
-  data.forEach(r=>{
-    const nombre=nombreColab(r.colaborador_id);
-    const documento=documentoColab(r.colaborador_id);
-    if(r.novedad){
-      rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:documento,Proyecto:'',Turno:'',Entrada:'',Salida:'',Novedad:labelNovedad(r.novedad)});
-      return;
-    }
-    const entrada=r.hora_entrada_custom||r.turno?.hora_entrada||'';
-    const salida=r.hora_salida_custom||r.turno?.hora_salida||'';
-    if(r.cc1) rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:documento,Proyecto:r.cc1.codigo+' - '+r.cc1.nombre,Turno:r.turno?.nombre||'',Entrada:entrada,Salida:salida,Novedad:''});
-    if(r.cc2){
-      const entrada2=r.hora_entrada_custom2||r.turno?.hora_entrada||'';
-      const salida2=r.hora_salida_custom2||r.turno?.hora_salida||'';
-      rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:documento,Proyecto:r.cc2.codigo+' - '+r.cc2.nombre,Turno:r.turno?.nombre||'',Entrada:entrada2,Salida:salida2,Novedad:''});
-    }
+  data.forEach(r=>{const nombre=nombreColab(r.colaborador_id),doc=documentoColab(r.colaborador_id);
+    if(r.novedad){rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:doc,Proyecto:'',Turno:'',Entrada:'',Salida:'',Novedad:labelNovedad(r.novedad)});return;}
+    const e=r.hora_entrada_custom||r.turno?.hora_entrada||'',s=r.hora_salida_custom||r.turno?.hora_salida||'';
+    if(r.cc1)rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:doc,Proyecto:r.cc1.codigo+' - '+r.cc1.nombre,Turno:r.turno?.nombre||'',Entrada:e,Salida:s,Novedad:''});
+    if(r.cc2){const e2=r.hora_entrada_custom2||r.turno?.hora_entrada||'',s2=r.hora_salida_custom2||r.turno?.hora_salida||'';rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:doc,Proyecto:r.cc2.codigo+' - '+r.cc2.nombre,Turno:r.turno?.nombre||'',Entrada:e2,Salida:s2,Novedad:''});}
   });
   rows.sort((a,b)=>a.Fecha.localeCompare(b.Fecha)||a.Colaborador.localeCompare(b.Colaborador));
-
-  const ws=XLSX.utils.json_to_sheet(rows);
-  ws['!cols']=[{wch:11},{wch:28},{wch:16},{wch:34},{wch:12},{wch:9},{wch:9},{wch:14}];
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,'Programación');
-  XLSX.writeFile(wb,'programacion_'+desde+'_a_'+hasta+'.xlsx');
-  document.getElementById('modal-excel-rango').classList.remove('open');
-  showToast('✓ Excel descargado');
+  const ws=XLSX.utils.json_to_sheet(rows);ws['!cols']=[{wch:11},{wch:28},{wch:16},{wch:34},{wch:12},{wch:9},{wch:9},{wch:14}];
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Programación');XLSX.writeFile(wb,'programacion_'+desde+'_a_'+hasta+'.xlsx');
+  document.getElementById('modal-excel-rango').classList.remove('open');showToast('✓ Excel descargado');
 }
 
-// ─── REPORTE FIC (colaboradores distintos por proyecto/mes) ─────────
-function openFIC(){
-  const[d1,d2]=primerYUltimoDiaMes();
-  document.getElementById('fic-desde').value=d1;
-  document.getElementById('fic-hasta').value=d2;
-  const sel=document.getElementById('fic-centro');
-  sel.innerHTML='<option value="">Todos los proyectos</option>'+
-    centrosTodos.slice().sort((a,b)=>a.codigo.localeCompare(b.codigo))
-      .map(c=>`<option value="${c.id}">${c.codigo} - ${c.nombre}</option>`).join('');
-  document.getElementById('modal-fic').classList.add('open');
-}
+// FIC
+function openFIC(){const[d1,d2]=primerYUltimoDiaMes();document.getElementById('fic-desde').value=d1;document.getElementById('fic-hasta').value=d2;const sel=document.getElementById('fic-centro');sel.innerHTML='<option value="">Todos los proyectos</option>'+centrosTodos.slice().sort((a,b)=>a.codigo.localeCompare(b.codigo)).map(c=>`<option value="${c.id}">${c.codigo} - ${c.nombre}</option>`).join('');document.getElementById('modal-fic').classList.add('open');}
 function closeFICOutside(e){if(e.target===document.getElementById('modal-fic'))document.getElementById('modal-fic').classList.remove('open');}
 async function generarFIC(){
-  const desde=document.getElementById('fic-desde').value;
-  const hasta=document.getElementById('fic-hasta').value;
-  const centroSel=document.getElementById('fic-centro').value;
-  if(!desde||!hasta){showToast('Selecciona ambas fechas');return;}
-  if(desde>hasta){showToast('La fecha inicial debe ser menor a la final');return;}
-  showToast('Generando reporte FIC...');
-  const{data,error}=await sb.from('programacion')
-    .select('colaborador_id,centro_costo_id,centro_costo_id2')
-    .gte('fecha',desde).lte('fecha',hasta).is('novedad',null);
-  if(error){showToast('Error: '+error.message);return;}
-  if(!data||!data.length){showToast('No hay programación en ese rango');return;}
-
+  const desde=document.getElementById('fic-desde').value,hasta=document.getElementById('fic-hasta').value,centroSel=document.getElementById('fic-centro').value;
+  if(!desde||!hasta){showToast('Selecciona ambas fechas');return;}if(desde>hasta){showToast('Fecha inicial debe ser menor');return;}showToast('Generando FIC...');
+  const{data,error}=await sb.from('programacion').select('colaborador_id,centro_costo_id,centro_costo_id2').gte('fecha',desde).lte('fecha',hasta).is('novedad',null);
+  if(error){showToast('Error: '+error.message);return;}if(!data||!data.length){showToast('No hay programación en ese rango');return;}
   const mapa={};
-  data.forEach(r=>{
-    [r.centro_costo_id,r.centro_costo_id2].forEach(cid=>{
-      if(!cid) return;
-      if(centroSel&&String(cid)!==centroSel) return;
-      if(!mapa[cid]) mapa[cid]=new Set();
-      mapa[cid].add(r.colaborador_id);
-    });
-  });
-  const centroIds=Object.keys(mapa).sort((a,b)=>{
-    const ca=centrosTodos.find(c=>String(c.id)===a),cb=centrosTodos.find(c=>String(c.id)===b);
-    return(ca?.codigo||'').localeCompare(cb?.codigo||'');
-  });
-  if(!centroIds.length){showToast('No hay datos para ese filtro');return;}
-
-  const resumenRows=[], detalleRows=[];
-  centroIds.forEach(cid=>{
-    const centro=centrosTodos.find(c=>String(c.id)===cid);
-    const set=mapa[cid];
-    resumenRows.push({Codigo:centro?.codigo||cid,Proyecto:centro?.nombre||'','Personas distintas':set.size});
-    set.forEach(colId=>detalleRows.push({Codigo:centro?.codigo||cid,Proyecto:centro?.nombre||'',Colaborador:nombreColab(colId),Documento:documentoColab(colId)}));
-  });
-
+  data.forEach(r=>{[r.centro_costo_id,r.centro_costo_id2].forEach(cid=>{if(!cid)return;if(centroSel&&String(cid)!==centroSel)return;if(!mapa[cid])mapa[cid]=new Set();mapa[cid].add(r.colaborador_id);});});
+  const ids=Object.keys(mapa).sort((a,b)=>(centrosTodos.find(c=>String(c.id)===a)?.codigo||'').localeCompare(centrosTodos.find(c=>String(c.id)===b)?.codigo||''));
+  if(!ids.length){showToast('No hay datos para ese filtro');return;}
+  const resumen=[],detalle=[];
+  ids.forEach(cid=>{const centro=centrosTodos.find(c=>String(c.id)===cid);const set=mapa[cid];resumen.push({Codigo:centro?.codigo||cid,Proyecto:centro?.nombre||'','Personas distintas':set.size});set.forEach(id=>detalle.push({Codigo:centro?.codigo||cid,Proyecto:centro?.nombre||'',Colaborador:nombreColab(id),Documento:documentoColab(id)}));});
   const wb=XLSX.utils.book_new();
-  const ws1=XLSX.utils.json_to_sheet(resumenRows);
-  ws1['!cols']=[{wch:10},{wch:34},{wch:16}];
-  XLSX.utils.book_append_sheet(wb,ws1,'FIC - Resumen');
-  const ws2=XLSX.utils.json_to_sheet(detalleRows);
-  ws2['!cols']=[{wch:10},{wch:34},{wch:28},{wch:16}];
-  XLSX.utils.book_append_sheet(wb,ws2,'FIC - Detalle');
-  const nombreArchivo=centroSel?('FIC_'+(centrosTodos.find(c=>String(c.id)===centroSel)?.codigo||centroSel)+'_'+desde+'_a_'+hasta+'.xlsx'):('FIC_'+desde+'_a_'+hasta+'.xlsx');
-  XLSX.writeFile(wb,nombreArchivo);
-  document.getElementById('modal-fic').classList.remove('open');
-  showToast('✓ Reporte FIC descargado');
+  const ws1=XLSX.utils.json_to_sheet(resumen);ws1['!cols']=[{wch:10},{wch:34},{wch:16}];XLSX.utils.book_append_sheet(wb,ws1,'FIC - Resumen');
+  const ws2=XLSX.utils.json_to_sheet(detalle);ws2['!cols']=[{wch:10},{wch:34},{wch:28},{wch:16}];XLSX.utils.book_append_sheet(wb,ws2,'FIC - Detalle');
+  const nf=centroSel?('FIC_'+(centrosTodos.find(c=>String(c.id)===centroSel)?.codigo||centroSel)+'_'+desde+'_a_'+hasta+'.xlsx'):('FIC_'+desde+'_a_'+hasta+'.xlsx');
+  XLSX.writeFile(wb,nf);document.getElementById('modal-fic').classList.remove('open');showToast('✓ Reporte FIC descargado');
 }
 
-// ─── REPETIR PROGRAMACIÓN DEL DÍA ANTERIOR ──────────────────────────
-function abrirRepetir(){
-  const anterior=new Date(currentDate); anterior.setDate(anterior.getDate()-1);
-  const hoyKey=dateKey(currentDate);
-  document.getElementById('repetir-sub').textContent='Se copiará hacia '+DAYS_S[currentDate.getDay()]+' '+currentDate.getDate()+' '+MONTHS[currentDate.getMonth()].slice(0,3)+' (día actual en la app)';
-  document.getElementById('repetir-origen').value=dateKey(anterior);
-  document.getElementById('repetir-origen').max=dateKey(anterior);
-  document.getElementById('repetir-sobrescribir').checked=false;
-  document.getElementById('modal-repetir').classList.add('open');
-}
+// REPETIR
+function abrirRepetir(){const ant=new Date(currentDate);ant.setDate(ant.getDate()-1);document.getElementById('repetir-sub').textContent='Se copiará hacia '+DAYS_S[currentDate.getDay()]+' '+currentDate.getDate()+' '+MONTHS[currentDate.getMonth()].slice(0,3)+' (día actual en la app)';document.getElementById('repetir-origen').value=dateKey(ant);document.getElementById('repetir-origen').max=dateKey(ant);document.getElementById('repetir-sobrescribir').checked=false;document.getElementById('modal-repetir').classList.add('open');}
 function closeRepetirOutside(e){if(e.target===document.getElementById('modal-repetir'))document.getElementById('modal-repetir').classList.remove('open');}
 async function ejecutarRepetir(){
-  const sobrescribir=document.getElementById('repetir-sobrescribir').checked;
-  const origenKey=document.getElementById('repetir-origen').value;
-  const hoyKey=dateKey(currentDate);
-  if(!origenKey){showToast('Selecciona la fecha de origen');return;}
-  if(origenKey>=hoyKey){showToast('La fecha de origen debe ser anterior al día actual');return;}
-
-  showToast('Cargando programación de ese día...');
-  const{data:origenRows,error:e0}=await sb.from('programacion').select('*').eq('fecha',origenKey);
-  if(e0){showToast('Error: '+e0.message);return;}
-  if(!origenRows||!origenRows.length){showToast('No hay programación ese día para repetir');return;}
-
-  const yaAsignadosHoy=new Set(Object.keys(programacion));
-  const registros=[];
-  origenRows.forEach(r=>{
-    if(!sobrescribir&&yaAsignadosHoy.has(String(r.colaborador_id))) return;
-    registros.push({fecha:hoyKey,colaborador_id:r.colaborador_id,turno_id:r.turno_id,centro_costo_id:r.centro_costo_id,centro_costo_id2:r.centro_costo_id2,hora_entrada_custom:r.hora_entrada_custom,hora_salida_custom:r.hora_salida_custom,hora_entrada_custom2:r.hora_entrada_custom2,hora_salida_custom2:r.hora_salida_custom2,novedad:r.novedad});
-  });
-  if(!registros.length){showToast('Todos ya tienen algo asignado hoy; nada para copiar');return;}
-
-  showToast('Repitiendo programación...');
-  const{error:e2}=await sb.from('programacion').upsert(registros,{onConflict:'fecha,colaborador_id'});
-  if(e2){showToast('Error: '+e2.message);return;}
-  document.getElementById('modal-repetir').classList.remove('open');
-  showToast('✓ Se copiaron '+registros.length+' asignación(es)');
-  loadProgramacion();
+  const sob=document.getElementById('repetir-sobrescribir').checked,origenKey=document.getElementById('repetir-origen').value,hoyKey=dateKey(currentDate);
+  if(!origenKey){showToast('Selecciona la fecha de origen');return;}if(origenKey>=hoyKey){showToast('La fecha de origen debe ser anterior al día actual');return;}
+  showToast('Cargando...');const{data:rows,error:e0}=await sb.from('programacion').select('*').eq('fecha',origenKey);if(e0){showToast('Error: '+e0.message);return;}if(!rows||!rows.length){showToast('No hay programación ese día');return;}
+  const ya=new Set(Object.keys(programacion));
+  const registros=rows.filter(r=>sob||!ya.has(String(r.colaborador_id))).map(r=>({fecha:hoyKey,colaborador_id:r.colaborador_id,turno_id:r.turno_id,centro_costo_id:r.centro_costo_id,centro_costo_id2:r.centro_costo_id2,hora_entrada_custom:r.hora_entrada_custom,hora_salida_custom:r.hora_salida_custom,hora_entrada_custom2:r.hora_entrada_custom2,hora_salida_custom2:r.hora_salida_custom2,novedad:r.novedad}));
+  if(!registros.length){showToast('Nada para copiar');return;}
+  const{error:e2}=await sb.from('programacion').upsert(registros,{onConflict:'fecha,colaborador_id'});if(e2){showToast('Error: '+e2.message);return;}
+  document.getElementById('modal-repetir').classList.remove('open');showToast('✓ Se copiaron '+registros.length+' asignación(es)');loadProgramacion();
 }
 
-// ─── MODO DE PROGRAMACIÓN: POR COLABORADOR / POR PROYECTO ──────────
-function setProgMode(m){
-  progMode=m;
-  document.getElementById('pm-colab').classList.toggle('active',m==='colab');
-  document.getElementById('pm-proyecto').classList.toggle('active',m==='proyecto');
-  document.getElementById('collab-search-wrap').style.display=m==='colab'?'':'none';
-  document.getElementById('collab-list').style.display=m==='colab'?'':'none';
-  document.getElementById('proyecto-prog-list').style.display=m==='proyecto'?'':'none';
-  if(m==='proyecto') renderProyectoProg();
-}
+// MODO POR PROYECTO
+function setProgMode(m){progMode=m;document.getElementById('pm-colab').classList.toggle('active',m==='colab');document.getElementById('pm-proyecto').classList.toggle('active',m==='proyecto');document.getElementById('collab-search-wrap').style.display=m==='colab'?'':'none';document.getElementById('collab-list').style.display=m==='colab'?'':'none';document.getElementById('proyecto-prog-list').style.display=m==='proyecto'?'':'none';if(m==='proyecto')renderProyectoProg();}
 function renderProyectoProg(){
   const activos=centros.slice().sort((a,b)=>b.codigo.localeCompare(a.codigo,undefined,{numeric:true}));
   if(!activos.length){document.getElementById('proyecto-prog-list').innerHTML='<div class="empty">No hay proyectos activos</div>';return;}
-  document.getElementById('proyecto-prog-list').innerHTML=activos.map(c=>{
-    let count=0;
-    colaboradores.forEach(col=>{
-      const asn=programacion[col.id];
-      if(asn&&!asn.novedad&&(asn.centro_costo_id===c.id||asn.centro_costo_id2===c.id)) count++;
-    });
-    return `<div class="proj-card" style="cursor:pointer" onclick="abrirAsignarProyecto(${c.id})">
-      <div class="proj-info"><div class="proj-code">${c.codigo}</div><div class="proj-name">${c.nombre}</div></div>
-      <div style="font-size:13px;color:${count?'var(--primary)':'var(--gray-400)'};font-weight:600;flex-shrink:0">${count} 👤</div>
-    </div>`;
-  }).join('');
+  document.getElementById('proyecto-prog-list').innerHTML=activos.map(c=>{let count=0;colaboradores.forEach(col=>{const asn=programacion[col.id];if(asn&&!asn.novedad&&(asn.centro_costo_id===c.id||asn.centro_costo_id2===c.id))count++;});return`<div class="proj-card" style="cursor:pointer" onclick="abrirAsignarProyecto(${c.id})"><div class="proj-info"><div class="proj-code">${c.codigo}</div><div class="proj-name">${c.nombre}</div></div><div style="font-size:13px;color:${count?'var(--primary)':'var(--gray-400)'};font-weight:600;flex-shrink:0">${count} 👤</div></div>`;}).join('');
 }
 
-// ─── MODAL: ASIGNAR COLABORADORES DISPONIBLES A UN PROYECTO ────────
 function abrirAsignarProyecto(projectId){
-  apProjectId=projectId;
-  const c=centrosTodos.find(x=>x.id===projectId);
+  apProjectId=projectId;const c=centrosTodos.find(x=>x.id===projectId);
   document.getElementById('ap-title').textContent=c.codigo+' - '+c.nombre;
   document.getElementById('ap-date-sub').textContent=DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()];
-  apShift=getTurnoNormal()?.id||turnos[0]?.id||null;
-  apChecked=new Set();
-  let horaRef=null;
-  colaboradores.forEach(col=>{
-    const asn=programacion[col.id];
-    if(asn&&!asn.novedad&&asn.centro_costo_id===projectId){
-      apChecked.add(col.id);
-      apShift=asn.turno_id;
-      if(asn.hora_entrada_custom) horaRef=asn;
-    }
-  });
-  document.getElementById('ap-colab-search').value='';
-  apRenderShifts();
-  if(horaRef){
-    document.getElementById('ap-input-entrada').value=horaRef.hora_entrada_custom.slice(0,5);
-    document.getElementById('ap-input-salida').value=horaRef.hora_salida_custom.slice(0,5);
-  } else if(isNocturno(apShift)){
-    const t=getTurnoNocturno();
-    document.getElementById('ap-input-entrada').value=t?t.hora_entrada.slice(0,5):'21:00';
-    document.getElementById('ap-input-salida').value=t?t.hora_salida.slice(0,5):'06:00';
-  } else {
-    const h=horarioNormal(currentDate);
-    document.getElementById('ap-input-entrada').value=h.entrada;
-    document.getElementById('ap-input-salida').value=h.salida;
-  }
-  apUpdateHorarioSection();
-  apRenderColabList();
-  document.getElementById('modal-asignar-proyecto').classList.add('open');
+  apShift=getTurnoNormal()?.id||turnos[0]?.id||null;apChecked=new Set();let horaRef=null;
+  colaboradores.forEach(col=>{const asn=programacion[col.id];if(asn&&!asn.novedad&&asn.centro_costo_id===projectId){apChecked.add(col.id);apShift=asn.turno_id;if(asn.hora_entrada_custom)horaRef=asn;}});
+  document.getElementById('ap-colab-search').value='';apRenderShifts();
+  if(horaRef){document.getElementById('ap-input-entrada').value=horaRef.hora_entrada_custom.slice(0,5);document.getElementById('ap-input-salida').value=horaRef.hora_salida_custom.slice(0,5);}
+  else if(isNocturno(apShift)){const t=getTurnoNocturno();document.getElementById('ap-input-entrada').value=t?t.hora_entrada.slice(0,5):'21:00';document.getElementById('ap-input-salida').value=t?t.hora_salida.slice(0,5):'06:00';}
+  else{const h=horarioNormal(currentDate);document.getElementById('ap-input-entrada').value=h.entrada;document.getElementById('ap-input-salida').value=h.salida;}
+  apUpdateHorarioSection();apRenderColabList();document.getElementById('modal-asignar-proyecto').classList.add('open');
 }
 function closeAsignarProyectoOutside(e){if(e.target===document.getElementById('modal-asignar-proyecto'))document.getElementById('modal-asignar-proyecto').classList.remove('open');}
-function apRenderShifts(){
-  document.getElementById('ap-shift-grid').innerHTML=turnos.map(t=>{
-    let timeLabel='';
-    if(t.nombre==='Normal'){ const h=horarioNormal(currentDate); timeLabel=h.entrada+' – '+h.salida; }
-    else { timeLabel=t.hora_entrada.slice(0,5)+' – '+t.hora_salida.slice(0,5); }
-    return `<div class="shift-opt ${t.id===apShift?'sel':''}" onclick="apSelShiftFn(${t.id})">
-      <div class="shift-opt-name">${t.nombre}</div>
-      <div class="shift-opt-time">${timeLabel}</div>
-    </div>`;
-  }).join('');
-}
-function apSelShiftFn(id){ apShift=id; apRenderShifts(); apUpdateHorarioSection(); }
-function apUpdateHorarioSection(){
-  const show=isEditable(apShift);
-  document.getElementById('ap-horario-section').style.display=show?'block':'none';
-  if(show) apRecalcHint();
-}
-function apRecalcHint(){
-  let defaultEntrada,defaultSalida,label;
-  if(isNormal(apShift)){ const h=horarioNormal(currentDate); defaultEntrada=h.entrada; defaultSalida=h.salida; label=h.label; }
-  else { const t=getTurnoNocturno(); defaultEntrada=t?t.hora_entrada.slice(0,5):'21:00'; defaultSalida=t?t.hora_salida.slice(0,5):'06:00'; label='Nocturno: '+defaultEntrada+' - '+defaultSalida; }
-  const entrada=document.getElementById('ap-input-entrada').value;
-  const salida=document.getElementById('ap-input-salida').value;
-  const esDefault=entrada===defaultEntrada&&salida===defaultSalida;
-  document.getElementById('ap-time-hint').textContent=esDefault?'⏰ Horario por defecto: '+label:'✏️ Horario modificado';
-}
-function apToggleColab(id){
-  if(apChecked.has(id)) apChecked.delete(id); else apChecked.add(id);
-  apRenderColabList();
-}
+function apRenderShifts(){document.getElementById('ap-shift-grid').innerHTML=turnos.map(t=>{let tl=t.nombre==='Normal'?(horarioNormal(currentDate).entrada+' – '+horarioNormal(currentDate).salida):(t.hora_entrada.slice(0,5)+' – '+t.hora_salida.slice(0,5));return`<div class="shift-opt ${t.id===apShift?'sel':''}" onclick="apSelShiftFn(${t.id})"><div class="shift-opt-name">${t.nombre}</div><div class="shift-opt-time">${tl}</div></div>`;}).join('');}
+function apSelShiftFn(id){apShift=id;apRenderShifts();apUpdateHorarioSection();}
+function apUpdateHorarioSection(){const show=isEditable(apShift);document.getElementById('ap-horario-section').style.display=show?'block':'none';if(show)apRecalcHint();}
+function apRecalcHint(){let de,ds,label;if(isNormal(apShift)){const h=horarioNormal(currentDate);de=h.entrada;ds=h.salida;label=h.label;}else{const t=getTurnoNocturno();de=t?t.hora_entrada.slice(0,5):'21:00';ds=t?t.hora_salida.slice(0,5):'06:00';label='Nocturno: '+de+' - '+ds;}const e=document.getElementById('ap-input-entrada').value,s=document.getElementById('ap-input-salida').value;document.getElementById('ap-time-hint').textContent=(e===de&&s===ds)?'⏰ Horario por defecto: '+label:'✏️ Horario modificado';}
+function apToggleColab(id){if(apChecked.has(id))apChecked.delete(id);else apChecked.add(id);apRenderColabList();}
 function apRenderColabList(){
   const q=(document.getElementById('ap-colab-search').value||'').toLowerCase();
   const lista=colaboradores.filter(c=>c.nombre.toLowerCase().includes(q));
   if(!lista.length){document.getElementById('ap-colab-list').innerHTML='<div class="empty">Sin resultados</div>';return;}
-  document.getElementById('ap-colab-list').innerHTML=lista.map(c=>{
-    const asn=programacion[c.id];
-    let nota='';
-    if(asn&&asn.novedad){
-      nota=' <span style="font-size:11px;color:#B45309">· '+({vacaciones:'vacaciones',incapacidad:'incapacidad',permiso:'permiso'}[asn.novedad])+'</span>';
-    } else if(asn&&asn.centro_costo_id!==apProjectId){
-      const otro=centrosTodos.find(x=>x.id===asn.centro_costo_id);
-      nota=' <span style="font-size:11px;color:var(--gray-400)">· hoy en '+(otro?otro.codigo:'?')+'</span>';
-    }
-    return `<div class="cc-item ${apChecked.has(c.id)?'sel':''}" onclick="apToggleColab(${c.id})">
-      <input type="checkbox" ${apChecked.has(c.id)?'checked':''} style="pointer-events:none" tabindex="-1">
-      <div style="flex:1;min-width:0">${c.nombre}${nota}</div>
-    </div>`;
-  }).join('');
+  document.getElementById('ap-colab-list').innerHTML=lista.map(c=>{const asn=programacion[c.id];let nota='';if(asn&&asn.novedad){nota=' <span style="font-size:11px;color:#B45309">· '+({vacaciones:'vacaciones',incapacidad:'incapacidad',permiso:'permiso'}[asn.novedad])+'</span>';}else if(asn&&asn.centro_costo_id!==apProjectId){const otro=centrosTodos.find(x=>x.id===asn.centro_costo_id);nota=' <span style="font-size:11px;color:var(--gray-400)">· hoy en '+(otro?otro.codigo:'?')+'</span>';}return`<div class="cc-item ${apChecked.has(c.id)?'sel':''}" onclick="apToggleColab(${c.id})"><input type="checkbox" ${apChecked.has(c.id)?'checked':''} style="pointer-events:none" tabindex="-1"><div style="flex:1;min-width:0">${c.nombre}${nota}</div></div>`;}).join('');
 }
 async function apGuardar(){
   if(!apShift){showToast('Selecciona un turno');return;}
-  const key=dateKey(currentDate);
-  let horaEntrada=null,horaSalida=null;
-  if(isEditable(apShift)){
-    horaEntrada=document.getElementById('ap-input-entrada').value;
-    horaSalida=document.getElementById('ap-input-salida').value;
-    if(isNormal(apShift)){
-      const h=horarioNormal(currentDate);
-      if(horaEntrada===h.entrada&&horaSalida===h.salida){horaEntrada=null;horaSalida=null;}
-    } else {
-      const t=getTurnoNocturno();
-      const de=t?t.hora_entrada.slice(0,5):'21:00', ds=t?t.hora_salida.slice(0,5):'06:00';
-      if(horaEntrada===de&&horaSalida===ds){horaEntrada=null;horaSalida=null;}
-    }
-  }
-  const registros=[];
-  apChecked.forEach(id=>{
-    registros.push({fecha:key,colaborador_id:id,turno_id:apShift,centro_costo_id:apProjectId,centro_costo_id2:null,hora_entrada_custom:horaEntrada,hora_salida_custom:horaSalida,hora_entrada_custom2:null,hora_salida_custom2:null,novedad:null});
-  });
-  const paraQuitar=[];
-  colaboradores.forEach(c=>{
-    const asn=programacion[c.id];
-    if(asn&&!asn.novedad&&asn.centro_costo_id===apProjectId&&!apChecked.has(c.id)) paraQuitar.push(c.id);
-  });
-  if(!registros.length&&!paraQuitar.length){showToast('No hay cambios para guardar');return;}
-  showToast('Guardando asignaciones...');
-  if(registros.length){
-    const{error:e1}=await sb.from('programacion').upsert(registros,{onConflict:'fecha,colaborador_id'});
-    if(e1){showToast('Error: '+e1.message);return;}
-  }
-  if(paraQuitar.length){
-    const{error:e2}=await sb.from('programacion').delete().eq('fecha',key).in('colaborador_id',paraQuitar);
-    if(e2){showToast('Error: '+e2.message);return;}
-  }
-  document.getElementById('modal-asignar-proyecto').classList.remove('open');
-  showToast('✓ Asignaciones guardadas');
-  await loadProgramacion();
-  if(progMode==='proyecto') renderProyectoProg();
+  const key=dateKey(currentDate);let he=null,hs=null;
+  if(isEditable(apShift)){he=document.getElementById('ap-input-entrada').value;hs=document.getElementById('ap-input-salida').value;if(isNormal(apShift)){const h=horarioNormal(currentDate);if(he===h.entrada&&hs===h.salida){he=null;hs=null;}}else{const t=getTurnoNocturno();const de=t?t.hora_entrada.slice(0,5):'21:00',ds=t?t.hora_salida.slice(0,5):'06:00';if(he===de&&hs===ds){he=null;hs=null;}}}
+  const registros=[];apChecked.forEach(id=>registros.push({fecha:key,colaborador_id:id,turno_id:apShift,centro_costo_id:apProjectId,centro_costo_id2:null,hora_entrada_custom:he,hora_salida_custom:hs,hora_entrada_custom2:null,hora_salida_custom2:null,novedad:null}));
+  const paraQuitar=[];colaboradores.forEach(c=>{const asn=programacion[c.id];if(asn&&!asn.novedad&&asn.centro_costo_id===apProjectId&&!apChecked.has(c.id))paraQuitar.push(c.id);});
+  if(!registros.length&&!paraQuitar.length){showToast('No hay cambios para guardar');return;}showToast('Guardando...');
+  if(registros.length){const{error:e1}=await sb.from('programacion').upsert(registros,{onConflict:'fecha,colaborador_id'});if(e1){showToast('Error: '+e1.message);return;}}
+  if(paraQuitar.length){const{error:e2}=await sb.from('programacion').delete().eq('fecha',key).in('colaborador_id',paraQuitar);if(e2){showToast('Error: '+e2.message);return;}}
+  document.getElementById('modal-asignar-proyecto').classList.remove('open');showToast('✓ Asignaciones guardadas');
+  await loadProgramacion();if(progMode==='proyecto')renderProyectoProg();
 }
 
-// ─── COMPARTIR PDF ───────────────────────────────────────────────────
-async function compartirPDF(){
-  showToast('Generando PDF...');
-  const blob = await generarPDFBlob();
-  if(!blob){ showToast('No hay programación para este día'); return; }
-  const key = dateKey(currentDate);
-  const fileName = 'programacion_'+key+'.pdf';
-  const file = new File([blob], fileName, {type:'application/pdf'});
-
-  // Intentar compartir nativo (móvil)
-  if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
-    try{
-      await navigator.share({
-        title: 'Programación '+DAYS[currentDate.getDay()]+' '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()],
-        text: 'Programación de jornadas del día',
-        files: [file]
-      });
-      return;
-    } catch(e){
-      if(e.name==='AbortError') return; // Usuario canceló
-    }
-  }
-
-  // Fallback: descargar el PDF
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href=url; a.download=fileName; a.click();
-  URL.revokeObjectURL(url);
-  showToast('✓ PDF descargado — compártelo desde tu galería');
-}
-
+// PDF
 async function generarPDFBlob(){
-  const key=dateKey(currentDate);
-  const{data}=await sb.from('programacion').select('*').eq('fecha',key);
-  if(!data||!data.length) return null;
-
-  const grupos={};
-  const novedades=[];
-
+  const key=dateKey(currentDate);const{data}=await sb.from('programacion').select('*').eq('fecha',key);if(!data||!data.length)return null;
+  const grupos={},novedades=[];
   data.forEach(r=>{
-    const colab=colaboradoresTodos.find(c=>c.id===r.colaborador_id);
-    const doc_id=colab?.documento||'';
-    // Si tiene novedad, separar
-    if(r.novedad){
-      novedades.push({nombre:colab?.nombre||'',documento:doc_id,novedad:r.novedad});
-      return;
-    }
-    const turno=turnos.find(t=>t.id===r.turno_id);
-    const cc=centrosTodos.find(c=>c.id===r.centro_costo_id);
-    const cc2=r.centro_costo_id2?centrosTodos.find(c=>c.id===r.centro_costo_id2):null;
-    function calcHorario(entradaCustom,salidaCustom){
-      if(entradaCustom&&salidaCustom) return entradaCustom.slice(0,5)+' - '+salidaCustom.slice(0,5);
-      if(turno&&turno.nombre==='Normal'){ const h=horarioNormal(currentDate); return h.entrada+' - '+h.salida; }
-      return turno?turno.hora_entrada.slice(0,5)+' - '+turno.hora_salida.slice(0,5):'';
-    }
-    const horario=calcHorario(r.hora_entrada_custom,r.hora_salida_custom);
-    const horario2=calcHorario(r.hora_entrada_custom2,r.hora_salida_custom2);
-    if(cc){
-      const k=cc.codigo+'||'+cc.nombre;
-      if(!grupos[k])grupos[k]=[];
-      grupos[k].push({nombre:colab?.nombre||'',documento:doc_id,horario});
-    }
-    if(cc2){
-      const k2=cc2.codigo+'||'+cc2.nombre;
-      if(!grupos[k2])grupos[k2]=[];
-      grupos[k2].push({nombre:colab?.nombre||'',documento:doc_id,horario:horario2+' (jornada partida)'});
-    }
+    const colab=colaboradoresTodos.find(c=>c.id===r.colaborador_id);const doc_id=colab?.documento||'';
+    if(r.novedad){novedades.push({nombre:colab?.nombre||'',documento:doc_id,novedad:r.novedad});return;}
+    const turno=turnos.find(t=>t.id===r.turno_id);const cc=centrosTodos.find(c=>c.id===r.centro_costo_id);const cc2=r.centro_costo_id2?centrosTodos.find(c=>c.id===r.centro_costo_id2):null;
+    function ch(ec,sc){if(ec&&sc)return ec.slice(0,5)+' - '+sc.slice(0,5);if(turno&&turno.nombre==='Normal'){const h=horarioNormal(currentDate);return h.entrada+' - '+h.salida;}return turno?turno.hora_entrada.slice(0,5)+' - '+turno.hora_salida.slice(0,5):'';}
+    const horario=ch(r.hora_entrada_custom,r.hora_salida_custom),horario2=ch(r.hora_entrada_custom2,r.hora_salida_custom2);
+    if(cc){const k=cc.codigo+'||'+cc.nombre;if(!grupos[k])grupos[k]=[];grupos[k].push({nombre:colab?.nombre||'',documento:doc_id,horario});}
+    if(cc2){const k2=cc2.codigo+'||'+cc2.nombre;if(!grupos[k2])grupos[k2]=[];grupos[k2].push({nombre:colab?.nombre||'',documento:doc_id,horario:horario2+' (jornada partida)'});}
   });
-
-  const{jsPDF}=window.jspdf;
-  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-  const W=210,margin=15; let y=margin;
-
-  // Encabezado
-  doc.setFillColor(67,56,202); doc.rect(0,0,W,28,'F');
-  doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica','normal');
-  doc.text('SAV INGENIERÍA SAS',margin,7);
-  doc.setFontSize(16); doc.setFont('helvetica','bold');
-  doc.text('Programacion de Jornadas',margin,15);
-  doc.setFontSize(11); doc.setFont('helvetica','normal');
-  doc.text(DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()]+' '+currentDate.getFullYear(),margin,23);
-  doc.setTextColor(0,0,0); y=36;
-
-  // Proyectos
-  const entries=Object.entries(grupos).sort((a,b)=>a[0].localeCompare(b[0]));
-  entries.forEach(([k,miembros])=>{
-    const[cod,nom]=k.split('||');
-    if(y>260){doc.addPage();y=margin;}
-    doc.setFillColor(238,242,255); doc.rect(margin,y,W-margin*2,8,'F');
-    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(67,56,202);
-    doc.text(cod+' - '+nom,margin+2,y+5.5); doc.setTextColor(0,0,0); y+=10;
-    miembros.forEach(m=>{
-      if(y>270){doc.addPage();y=margin;}
-      doc.setFontSize(9.5); doc.setFont('helvetica','normal'); doc.setTextColor(0,0,0);
-      doc.text('  '+m.nombre,margin+2,y);
-      doc.setTextColor(100,100,100); doc.text(m.horario,W-margin-38,y);
-      doc.setTextColor(0,0,0); y+=4.5;
-      doc.setFontSize(7.5); doc.setTextColor(140,140,140);
-      doc.text('   CC '+(m.documento||'—'),margin+2,y);
-      doc.setTextColor(0,0,0); y+=5.5;
-    });
-    y+=4;
+  const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});const W=210,margin=15;let y=margin;
+  doc.setFillColor(67,56,202);doc.rect(0,0,W,28,'F');doc.setTextColor(255,255,255);doc.setFontSize(9);doc.setFont('helvetica','normal');doc.text('SAV INGENIERÍA SAS',margin,7);
+  doc.setFontSize(16);doc.setFont('helvetica','bold');doc.text('Programacion de Jornadas',margin,15);doc.setFontSize(11);doc.setFont('helvetica','normal');doc.text(DAYS[currentDate.getDay()]+', '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()]+' '+currentDate.getFullYear(),margin,23);doc.setTextColor(0,0,0);y=36;
+  Object.entries(grupos).sort((a,b)=>a[0].localeCompare(b[0])).forEach(([k,miembros])=>{
+    const[cod,nom]=k.split('||');if(y>260){doc.addPage();y=margin;}
+    doc.setFillColor(238,242,255);doc.rect(margin,y,W-margin*2,8,'F');doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(67,56,202);doc.text(cod+' - '+nom,margin+2,y+5.5);doc.setTextColor(0,0,0);y+=10;
+    miembros.forEach(m=>{if(y>270){doc.addPage();y=margin;}doc.setFontSize(9.5);doc.setFont('helvetica','normal');doc.setTextColor(0,0,0);doc.text('  '+m.nombre,margin+2,y);doc.setTextColor(100,100,100);doc.text(m.horario,W-margin-38,y);doc.setTextColor(0,0,0);y+=4.5;doc.setFontSize(7.5);doc.setTextColor(140,140,140);doc.text('   CC '+(m.documento||'—'),margin+2,y);doc.setTextColor(0,0,0);y+=5.5;});y+=4;
   });
-
-  // Sección de novedades al final
-  if(novedades.length>0){
-    if(y>250){doc.addPage();y=margin;}
-    y+=4;
-    // Cabecera sección novedades
-    doc.setFillColor(254,243,199); doc.rect(margin,y,W-margin*2,8,'F');
-    doc.setFontSize(10); doc.setFont('helvetica','bold'); doc.setTextColor(146,64,14);
-    doc.text('NOVEDADES DEL DIA',margin+2,y+5.5);
-    doc.setTextColor(0,0,0); y+=10;
-
-    // Agrupar por tipo de novedad
-    const grupos_nov={'vacaciones':[],'incapacidad':[],'permiso':[]};
-    novedades.forEach(n=>{ if(grupos_nov[n.novedad]) grupos_nov[n.novedad].push({nombre:n.nombre,documento:n.documento}); });
-    const nov_labels={'vacaciones':'Vacaciones','incapacidad':'Incapacidad','permiso':'Permiso'};
-
-    Object.entries(grupos_nov).forEach(([tipo,items])=>{
-      if(!items.length) return;
-      if(y>265){doc.addPage();y=margin;}
-      doc.setFontSize(9.5); doc.setFont('helvetica','bold'); doc.setTextColor(146,64,14);
-      doc.text(nov_labels[tipo]+':',margin+2,y);
-      doc.setTextColor(0,0,0); y+=6;
-      items.forEach(item=>{
-        if(y>270){doc.addPage();y=margin;}
-        doc.setFont('helvetica','normal'); doc.setFontSize(9.5);
-        doc.text('  '+item.nombre,margin+4,y);
-        doc.setFontSize(7.5); doc.setTextColor(140,140,140);
-        doc.text('CC '+(item.documento||'—'),W-margin-38,y);
-        doc.setTextColor(0,0,0); y+=6;
-      });
-      y+=2;
-    });
-  }
-
-  doc.setFontSize(8); doc.setTextColor(150,150,150);
-  doc.text('Generado por Jornadas App',margin,290);
-  return doc.output('blob');
+  if(novedades.length>0){if(y>250){doc.addPage();y=margin;}y+=4;doc.setFillColor(254,243,199);doc.rect(margin,y,W-margin*2,8,'F');doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(146,64,14);doc.text('NOVEDADES DEL DIA',margin+2,y+5.5);doc.setTextColor(0,0,0);y+=10;
+    const gn={vacaciones:[],incapacidad:[],permiso:[]};novedades.forEach(n=>{if(gn[n.novedad])gn[n.novedad].push({nombre:n.nombre,documento:n.documento});});
+    Object.entries(gn).forEach(([tipo,items])=>{if(!items.length)return;if(y>265){doc.addPage();y=margin;}doc.setFontSize(9.5);doc.setFont('helvetica','bold');doc.setTextColor(146,64,14);doc.text({vacaciones:'Vacaciones',incapacidad:'Incapacidad',permiso:'Permiso'}[tipo]+':',margin+2,y);doc.setTextColor(0,0,0);y+=6;items.forEach(item=>{if(y>270){doc.addPage();y=margin;}doc.setFont('helvetica','normal');doc.setFontSize(9.5);doc.text('  '+item.nombre,margin+4,y);doc.setFontSize(7.5);doc.setTextColor(140,140,140);doc.text('CC '+(item.documento||'—'),W-margin-38,y);doc.setTextColor(0,0,0);y+=6;});y+=2;});}
+  doc.setFontSize(8);doc.setTextColor(150,150,150);doc.text('Generado por Jornadas App',margin,290);return doc.output('blob');
 }
 
+async function exportPDFDia(){showToast('Generando PDF...');const blob=await generarPDFBlob();if(!blob){showToast('No hay programación para este día');return;}const key=dateKey(currentDate);const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='programacion_'+key+'.pdf';a.click();URL.revokeObjectURL(url);showToast('✓ PDF descargado');}
 
-async function exportPDFDia(){
-  showToast('Generando PDF...');
-  const blob=await generarPDFBlob();
-  if(!blob){showToast('No hay programación para este día');return;}
-  const key=dateKey(currentDate);
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;a.download='programacion_'+key+'.pdf';a.click();
-  URL.revokeObjectURL(url);
-  showToast('✓ PDF descargado');
-}
-
-// ─── REPORTE MENSUAL ─────────────────────────────────────────────────
+// REPORTE
 async function loadReport(){
   document.getElementById('report-content').innerHTML='<div class="loading"><div class="spinner"></div></div>';
   document.getElementById('month-label').textContent=DAYS[currentDate.getDay()]+' '+currentDate.getDate()+' de '+MONTHS[currentDate.getMonth()];
   const key=dateKey(currentDate);
   const{data}=await sb.from('programacion').select('colaborador_id,novedad,cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').eq('fecha',key);
   if(!data||!data.length){document.getElementById('report-content').innerHTML='<div class="empty">No hay programaciones para este día.</div>';return;}
-
-  // Separar proyectos y novedades
-  const grupos={};
-  const novedades={vacaciones:[],incapacidad:[],permiso:[]};
-  data.forEach(r=>{
-    const colab=colaboradoresTodos.find(c=>c.id===r.colaborador_id);
-    const nombre=colab?.nombre||'';
-    if(r.novedad){
-      if(novedades[r.novedad]) novedades[r.novedad].push(nombre);
-      return;
-    }
-    if(r.cc1){const k=r.cc1.codigo+'|'+r.cc1.nombre;if(!grupos[k])grupos[k]=[];grupos[k].push(nombre);}
-    if(r.cc2){const k2=r.cc2.codigo+'|'+r.cc2.nombre;if(!grupos[k2])grupos[k2]=[];grupos[k2].push(nombre);}
-  });
-
-  const entries=Object.entries(grupos).sort((a,b)=>b[1].length-a[1].length);
-  const max=entries[0]?entries[0][1].length:1;
-  const totalNov=Object.values(novedades).flat().length;
+  const grupos={},novedades={vacaciones:[],incapacidad:[],permiso:[]};
+  data.forEach(r=>{const colab=colaboradoresTodos.find(c=>c.id===r.colaborador_id);const nombre=colab?.nombre||'';if(r.novedad){if(novedades[r.novedad])novedades[r.novedad].push(nombre);return;}if(r.cc1){const k=r.cc1.codigo+'|'+r.cc1.nombre;if(!grupos[k])grupos[k]=[];grupos[k].push(nombre);}if(r.cc2){const k2=r.cc2.codigo+'|'+r.cc2.nombre;if(!grupos[k2])grupos[k2]=[];grupos[k2].push(nombre);}});
+  const entries=Object.entries(grupos).sort((a,b)=>b[1].length-a[1].length);const max=entries[0]?entries[0][1].length:1;const totalNov=Object.values(novedades).flat().length;
   const nov_labels={vacaciones:'🏖️ Vacaciones',incapacidad:'🏥 Incapacidad',permiso:'📝 Permiso'};
-
-  const novHtml=totalNov>0?`
-    <div class="report-card" style="margin-top:8px;background:#FFFBEB;border:1px solid #FDE68A">
-      <div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:8px">Novedades del día</div>
-      ${Object.entries(novedades).filter(([,v])=>v.length>0).map(([tipo,nombres])=>`
-        <div style="margin-bottom:8px">
-          <div style="font-size:12px;font-weight:600;color:#92400E;margin-bottom:4px">${nov_labels[tipo]}</div>
-          ${nombres.map(n=>`<div style="font-size:12px;color:#374151;padding:2px 0">• ${n}</div>`).join('')}
-        </div>`).join('')}
-    </div>`:'';
-
-  document.getElementById('report-content').innerHTML=`
-    <div class="report-card">
-      <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:4px">Colaboradores por proyecto</div>
-      <div style="font-size:12px;color:#9CA3AF;margin-bottom:12px">${entries.length} proyectos · ${data.length-totalNov} en campo${totalNov>0?' · '+totalNov+' con novedad':''}</div>
-      ${entries.map(([k,colabs])=>{
-        const[cod,nom]=k.split('|');
-        return`<div class="report-row">
-          <div class="report-cc">
-            <div class="report-code">${cod}</div>
-            <div>${nom.slice(0,32)}</div>
-            <div class="progress"><div class="progress-fill" style="width:${Math.round(colabs.length/max*100)}%"></div></div>
-          </div>
-          <div class="report-hrs">${colabs.length} 👤</div>
-        </div>`;
-      }).join('')}
-    </div>
-    ${novHtml}`;
-}
-
-function calcHrs(t){
-  if(!t)return 8;
-  const[h1,m1]=t.hora_entrada.split(':').map(Number);
-  const[h2,m2]=t.hora_salida.split(':').map(Number);
-  return(h2*60+m2-h1*60-m1)/60;
-}
-function changeMonth(d){currentMonth.setMonth(currentMonth.getMonth()+d);loadReport();}
-
-async function exportCSV(){
-  showToast('Generando CSV...');
-  const y=currentMonth.getFullYear(),m=currentMonth.getMonth();
-  const from=new Date(y,m,1).toISOString().slice(0,10);
-  const to=new Date(y,m+1,0).toISOString().slice(0,10);
-  const{data}=await sb.from('programacion').select('fecha,hora_entrada_custom,hora_salida_custom,colaboradores(nombre),turnos(nombre,hora_entrada,hora_salida),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').gte('fecha',from).lte('fecha',to).order('fecha');
-  if(!data||!data.length){showToast('Sin datos para exportar');return;}
-  const rows=[['Fecha','Colaborador','Turno','Entrada','Salida','CC1 Codigo','CC1 Nombre','CC2 Codigo','CC2 Nombre']];
-  data.forEach(r=>{
-    let entrada=r.hora_entrada_custom?.slice(0,5)||r.turnos?.hora_entrada?.slice(0,5)||'';
-    let salida=r.hora_salida_custom?.slice(0,5)||r.turnos?.hora_salida?.slice(0,5)||'';
-    if(!r.hora_entrada_custom&&r.turnos?.nombre==='Normal'){
-      const h=horarioNormal(new Date(r.fecha+'T12:00:00'));
-      entrada=h.entrada;salida=h.salida;
-    }
-    rows.push([r.fecha,r.colaboradores?.nombre||'',r.turnos?.nombre||'',entrada,salida,r.cc1?.codigo||'',r.cc1?.nombre||'',r.cc2?.codigo||'',r.cc2?.nombre||'']);
-  });
-  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
-  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=`jornadas_${from}_${to}.csv`;a.click();URL.revokeObjectURL(url);
-  showToast('✓ CSV descargado');
+  const novHtml=totalNov>0?`<div class="report-card" style="margin-top:8px;background:#FFFBEB;border:1px solid #FDE68A"><div style="font-size:13px;font-weight:600;color:#92400E;margin-bottom:8px">Novedades del día</div>${Object.entries(novedades).filter(([,v])=>v.length>0).map(([tipo,nombres])=>`<div style="margin-bottom:8px"><div style="font-size:12px;font-weight:600;color:#92400E;margin-bottom:4px">${nov_labels[tipo]}</div>${nombres.map(n=>`<div style="font-size:12px;color:#374151;padding:2px 0">• ${n}</div>`).join('')}</div>`).join('')}</div>`:'';
+  document.getElementById('report-content').innerHTML=`<div class="report-card"><div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:4px">Colaboradores por proyecto</div><div style="font-size:12px;color:#9CA3AF;margin-bottom:12px">${entries.length} proyectos · ${data.length-totalNov} en campo${totalNov>0?' · '+totalNov+' con novedad':''}</div>${entries.map(([k,colabs])=>{const[cod,nom]=k.split('|');return`<div class="report-row"><div class="report-cc"><div class="report-code">${cod}</div><div>${nom.slice(0,32)}</div><div class="progress"><div class="progress-fill" style="width:${Math.round(colabs.length/max*100)}%"></div></div></div><div class="report-hrs">${colabs.length} 👤</div></div>`;}).join('')}</div>${novHtml}`;
 }
 
 let toastTimer;
-function showToast(msg){
-  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
-  clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2500);
-}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2500);}
 
 init();
 </script>
