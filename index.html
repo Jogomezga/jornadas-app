@@ -2,610 +2,313 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Validación de Asistencia</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SAV INGENIERÍA SAS - Jornadas</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-  :root{
-    --bg:#1C1F26; --card:#262B36; --card-2:#2F3543; --text:#F5F3EE; --muted:#8A93A6;
-    --ingreso:#FF6B1A; --salida:#2DB7B0; --error:#E1483F; --ok:#5FD097; --pendiente:#E8B94B;
+  :root {
+    --primary: #4338CA; --primary-light: #EEF2FF; --primary-dark: #3730A3;
+    --success: #059669; --success-light: #D1FAE5;
+    --warning: #D97706; --warning-light: #FEF3C7;
+    --danger: #DC2626; --danger-light: #FEE2E2;
+    --gray-100: #F3F4F6; --gray-200: #E5E7EB; --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF; --gray-500: #6B7280; --gray-700: #374151; --gray-900: #111827;
+    --radius: 12px; --radius-sm: 8px;
   }
-  *{box-sizing:border-box;}
-  body{
-    margin:0; background:var(--bg); color:var(--text);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-    padding:20px;
-  }
-  h1{ font-size:20px; margin:0 0 4px; }
-  .subtitulo{ color:var(--muted); font-size:13px; margin:0 0 20px; }
-
-  .barra{
-    display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px; align-items:center;
-    background:var(--card); padding:14px; border-radius:14px;
-  }
-  .barra input, .barra select{
-    background:var(--card-2); border:1px solid #3A4152; color:var(--text);
-    padding:9px 12px; border-radius:10px; font-size:14px;
-  }
-  .barra label{ font-size:12px; color:var(--muted); display:flex; flex-direction:column; gap:4px; }
-  .contador{ margin-left:auto; font-size:13px; color:var(--muted); }
-
-  .tabla-wrap{ overflow-x:auto; border-radius:14px; border:1px solid #3A4152; }
-  table{ width:100%; border-collapse:collapse; background:var(--card); font-size:13.5px; }
-  th, td{ padding:12px 14px; text-align:left; border-bottom:1px solid #3A4152; white-space:nowrap; }
-  th{ color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
-  tr:last-child td{ border-bottom:none; }
-
-  .foto-mini{ width:44px; height:44px; border-radius:10px; object-fit:cover; background:#000; }
-  .chip{ padding:4px 10px; border-radius:100px; font-size:12px; font-weight:700; display:inline-block; }
-  .chip.ingreso{ background:rgba(255,107,26,.18); color:var(--ingreso); }
-  .chip.salida{ background:rgba(45,183,176,.18); color:var(--salida); }
-  .chip.pendiente{ background:rgba(232,185,75,.18); color:var(--pendiente); }
-  .chip.aprobado{ background:rgba(95,208,151,.18); color:var(--ok); }
-  .chip.rechazado{ background:rgba(225,72,63,.18); color:var(--error); }
-
-  .gps-link{ color:var(--salida); font-size:12.5px; text-decoration:underline; }
-  .sin-gps{ color:var(--muted); font-size:12.5px; }
-
-  .acciones{ display:flex; gap:6px; }
-  .acciones button{
-    border:none; border-radius:8px; padding:7px 11px; font-size:12.5px; font-weight:700; cursor:pointer;
-  }
-  .btn-aprobar{ background:var(--ok); color:#0E1712; }
-  .btn-rechazar{ background:var(--error); color:#fff; }
-  .btn-eliminar{ background:transparent; color:var(--muted); border:1px solid #3A4152 !important; }
-  .comentario{ color:var(--muted); font-size:12px; max-width:180px; white-space:normal; }
-
-  .vacio{ text-align:center; color:var(--muted); padding:40px 0; }
-
-  .modal-fondo{
-    position:fixed; inset:0; background:rgba(0,0,0,.55); display:none;
-    align-items:center; justify-content:center; padding:20px; z-index:10;
-  }
-  .modal-fondo.activo{ display:flex; }
-  .modal{ background:var(--card); border-radius:16px; padding:22px; max-width:340px; width:100%; }
-  .modal h3{ margin:0 0 12px; font-size:16px; }
-  .modal textarea{
-    width:100%; min-height:80px; background:var(--card-2); border:1px solid #3A4152; color:var(--text);
-    border-radius:10px; padding:10px; font-size:14px; resize:vertical;
-  }
-  .modal-botones{ display:flex; gap:10px; margin-top:14px; }
-  .modal-botones button{ flex:1; border:none; border-radius:10px; padding:11px; font-weight:700; cursor:pointer; }
-  .modal-cancelar{ background:var(--card-2); color:var(--text); }
-  .modal-confirmar{ background:var(--error); color:#fff; }
-
-  .validador{ font-size:12px; }
-
-  .oculto{ display:none !important; }
-
-  .candado-fondo{
-    position:fixed; inset:0; background:var(--bg); z-index:100;
-    display:flex; align-items:center; justify-content:center; padding:20px;
-  }
-  .candado-caja{ max-width:300px; width:100%; text-align:center; }
-  .candado-caja h2{ margin:0 0 6px; font-size:19px; }
-  .candado-caja p{ margin:0 0 22px; color:var(--muted); font-size:13.5px; }
-  .pin-dots{ display:flex; gap:14px; justify-content:center; margin:0 0 22px; }
-  .pin-dots span{ width:16px; height:16px; border-radius:50%; background:var(--card-2); display:block; }
-  .pin-dots span.lleno{ background:var(--ok); }
-  .mensaje-error{ color:var(--error); text-align:center; font-size:13px; min-height:18px; margin-bottom:10px; }
-  .teclado{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; max-width:260px; margin:0 auto; }
-  .teclado button{
-    padding:18px 0; font-size:20px; font-weight:600; border-radius:14px; border:none;
-    background:var(--card); color:var(--text); cursor:pointer;
-  }
-  .teclado button:active{ background:var(--card-2); }
-  .teclado .borrar{ color:var(--muted); font-size:14px; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--gray-100); color: var(--gray-900); }
+  .app { display: flex; flex-direction: column; height: 100vh; max-width: 480px; margin: 0 auto; background: white; }
+  .header { background: var(--primary); color: white; padding: 16px; padding-top: max(16px, env(safe-area-inset-top)); flex-shrink: 0; }
+  .header-title { font-size: 17px; font-weight: 700; margin-bottom: 2px; letter-spacing: 0.3px; }
+  .header-sub { font-size: 12px; opacity: 0.85; margin-bottom: 6px; }
+  .header-date { font-size: 13px; opacity: 0.8; margin-bottom: 12px; }
+  .date-nav { display: flex; align-items: center; gap: 8px; }
+  .date-nav-btn { background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 8px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .date-label { font-size: 15px; font-weight: 600; flex: 1; text-align: center; }
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+  .stat { background: rgba(255,255,255,0.15); border-radius: var(--radius-sm); padding: 8px 12px; }
+  .stat-val { font-size: 20px; font-weight: 700; }
+  .stat-lbl { font-size: 11px; opacity: 0.8; margin-top: 1px; }
+  .tabs { display: flex; border-bottom: 1px solid var(--gray-200); flex-shrink: 0; background: white; }
+  .tab { flex: 1; padding: 8px 4px; text-align: center; font-size: 11px; color: var(--gray-500); cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+  .tab-icon { font-size: 16px; display: block; margin-bottom: 2px; }
+  .content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .view { display: none; padding: 12px; }
+  .view.active { display: block; }
+  .collab-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; cursor: pointer; transition: box-shadow 0.3s, border-color 0.3s; }
+  .collab-card.assigned { border-left: 3px solid var(--success); }
+  .collab-card.pending { border-left: 3px solid var(--gray-300); }
+  .collab-card.next-highlight { border-color: var(--primary) !important; box-shadow: 0 0 0 3px var(--primary-light); }
+  .card-top { display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .card-info { flex: 1; min-width: 0; }
+  .card-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-cc { font-size: 12px; color: var(--gray-500); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-doc { font-size: 10.5px; color: var(--gray-400); margin-top: 1px; }
+  .badge { font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 20px; flex-shrink: 0; }
+  .badge-ok { background: var(--success-light); color: var(--success); }
+  .badge-pending { background: var(--warning-light); color: var(--warning); }
+  .shift-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; background: var(--primary-light); color: var(--primary); padding: 3px 8px; border-radius: 20px; margin-top: 6px; font-weight: 500; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: flex-end; justify-content: center; }
+  .modal-backdrop.open { display: flex; }
+  .modal { background: white; border-radius: 20px 20px 0 0; padding: 20px; padding-bottom: max(20px, env(safe-area-inset-bottom)); width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+  .modal-handle { width: 40px; height: 4px; background: var(--gray-300); border-radius: 2px; margin: 0 auto 16px; }
+  .modal-title { font-size: 17px; font-weight: 700; }
+  .modal-sub { font-size: 13px; color: var(--gray-500); margin-top: 2px; margin-bottom: 16px; }
+  .section-title { font-size: 11px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.05em; margin: 14px 0 8px; }
+  .shift-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+  .shift-opt { border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); padding: 10px 6px; text-align: center; cursor: pointer; }
+  .shift-opt.sel { border-color: var(--primary); background: var(--primary-light); }
+  .shift-opt-name { font-size: 13px; font-weight: 600; color: var(--gray-700); }
+  .shift-opt.sel .shift-opt-name { color: var(--primary); }
+  .shift-opt-time { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+  .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+  .time-group { display: flex; flex-direction: column; gap: 4px; }
+  .time-label { font-size: 11px; color: var(--gray-500); font-weight: 500; }
+  .time-input { padding: 9px 10px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; color: var(--gray-900); background: white; width: 100%; outline: none; }
+  .time-input:focus { border-color: var(--primary); }
+  .time-hint { font-size: 11px; color: var(--primary); background: var(--primary-light); padding: 6px 10px; border-radius: var(--radius-sm); margin-top: 6px; }
+  .search-input { width: 100%; padding: 10px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; color: var(--gray-900); background: #F9FAFB; outline: none; margin-bottom: 8px; }
+  .search-input:focus { border-color: var(--primary); background: white; }
+  .cc-list { max-height: 180px; overflow-y: auto; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); }
+  .cc-item { padding: 10px 12px; font-size: 13px; color: var(--gray-700); cursor: pointer; border-bottom: 1px solid var(--gray-100); display: flex; align-items: center; gap: 8px; }
+  .cc-item:last-child { border-bottom: none; }
+  .cc-item.sel { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+  .cc-code { font-size: 11px; color: var(--gray-400); font-family: monospace; min-width: 34px; }
+  .cc-item.sel .cc-code { color: var(--primary); opacity: 0.7; }
+  .split-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-top: 1px solid var(--gray-100); margin-top: 8px; }
+  .split-label { font-size: 14px; font-weight: 500; color: var(--gray-700); }
+  .split-sub { font-size: 12px; color: var(--gray-400); margin-top: 1px; }
+  .toggle { position: relative; width: 44px; height: 24px; background: var(--gray-300); border-radius: 12px; cursor: pointer; transition: background 0.2s; flex-shrink: 0; border: none; }
+  .toggle.on { background: var(--primary); }
+  .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.2s; }
+  .toggle.on::after { transform: translateX(20px); }
+  .btn { width: 100%; padding: 14px; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 14px; }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-danger { background: var(--danger-light); color: var(--danger); margin-top: 8px; }
+  .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .month-btn { background: var(--gray-100); border: none; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; color: var(--gray-700); font-weight: 500; }
+  .month-label { font-size: 15px; font-weight: 700; }
+  .pdf-btn { width: 100%; padding: 12px; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 600; color: white; background: var(--success); cursor: pointer; margin-top: 8px; }
+  .report-card { background: #F9FAFB; border-radius: var(--radius); padding: 14px; margin-bottom: 8px; }
+  .report-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--gray-200); }
+  .report-row:last-child { border-bottom: none; }
+  .report-cc { font-size: 13px; color: var(--gray-700); flex: 1; min-width: 0; margin-right: 8px; }
+  .report-code { font-size: 11px; color: var(--gray-400); font-family: monospace; }
+  .report-hrs { font-size: 14px; font-weight: 700; color: var(--primary); flex-shrink: 0; }
+  .progress { height: 3px; background: var(--gray-200); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--primary); border-radius: 2px; }
+  .proj-search { width: 100%; padding: 10px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; background: #F9FAFB; outline: none; margin-bottom: 10px; }
+  .proj-search:focus { border-color: var(--primary); background: white; }
+  .proj-filter { display: flex; gap: 6px; margin-bottom: 10px; }
+  .filter-btn { flex: 1; padding: 7px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; cursor: pointer; background: white; color: var(--gray-600); text-align: center; }
+  .filter-btn.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+  .proj-card { display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid var(--gray-200); border-radius: var(--radius); margin-bottom: 8px; }
+  .proj-card.inactive { opacity: 0.5; }
+  .proj-info { flex: 1; min-width: 0; margin-right: 10px; }
+  .proj-code { font-size: 11px; font-weight: 600; color: var(--primary); font-family: monospace; }
+  .proj-name { font-size: 13px; color: var(--gray-700); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .proj-toggle { position: relative; width: 44px; height: 24px; background: var(--gray-300); border-radius: 12px; cursor: pointer; transition: background 0.2s; flex-shrink: 0; border: none; }
+  .proj-toggle.on { background: var(--success); }
+  .proj-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.2s; }
+  .proj-toggle.on::after { transform: translateX(20px); }
+  .proj-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .icon-btn { width: 28px; height: 28px; border: none; border-radius: 8px; background: var(--gray-100); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .icon-btn.danger { background: #FEE2E2; }
+  .add-btn { width: 100%; padding: 13px; border: 1.5px dashed var(--primary); border-radius: var(--radius); font-size: 14px; font-weight: 600; color: var(--primary); background: white; cursor: pointer; margin-bottom: 12px; }
+  .form-group { margin-bottom: 12px; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 5px; display: block; }
+  .form-input { width: 100%; padding: 11px 12px; border: 1px solid var(--gray-200); border-radius: var(--radius-sm); font-size: 14px; color: var(--gray-900); background: white; outline: none; }
+  .form-input:focus { border-color: var(--primary); }
+  .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 200px; gap: 12px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--gray-200); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-box { margin: 16px; padding: 16px; background: var(--danger-light); border-radius: var(--radius); }
+  .error-title { font-size: 14px; font-weight: 600; color: var(--danger); margin-bottom: 6px; }
+  .error-msg { font-size: 12px; color: #7F1D1D; line-height: 1.5; word-break: break-all; }
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--gray-900); color: white; padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 200; white-space: nowrap; max-width: 90vw; text-align: center; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .empty { text-align: center; padding: 40px 24px; color: var(--gray-400); font-size: 14px; }
+  .novedad-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 4px; }
+  .novedad-opt { border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm); padding: 14px 6px; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .novedad-opt.sel { border-color: var(--warning); background: var(--warning-light); }
+  .novedad-icon { font-size: 24px; margin-bottom: 4px; }
+  .novedad-name { font-size: 12px; font-weight: 600; color: var(--gray-700); }
+  .novedad-opt.sel .novedad-name { color: var(--warning); }
+  .badge-novedad { background: #FEF3C7; color: #92400E; }
+  .av0{background:#EEF2FF;color:#4338CA} .av1{background:#D1FAE5;color:#065F46} .av2{background:#FEF3C7;color:#92400E} .av3{background:#FCE7F3;color:#9D174D} .av4{background:#E0F2FE;color:#0C4A6E} .av5{background:#F0FDF4;color:#14532D}
 </style>
 </head>
 <body>
-
-<!-- ============ CONFIGURA AQUÍ TUS CREDENCIALES DE SUPABASE ============ -->
-<script>
-  const SUPABASE_URL = 'PON_AQUI_TU_SUPABASE_URL';
-  const SUPABASE_ANON_KEY = 'PON_AQUI_TU_SUPABASE_ANON_KEY';
-
-  // PIN de 4 dígitos para entrar a este panel de validación.
-  const PIN_VALIDACION = 'PON_AQUI_UN_PIN_DE_4_DIGITOS';
-
-  // Nombre que quedará registrado en cada aprobación/rechazo.
-  const NOMBRE_VALIDADOR = 'PON_AQUI_EL_NOMBRE_DE_QUIEN_VALIDA';
-</script>
-<!-- ======================================================================= -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-
-<div class="candado-fondo" id="candado-fondo">
-  <div class="candado-caja">
-    <h2>Acceso restringido</h2>
-    <p>Ingresa el PIN para validar asistencia</p>
-    <div class="pin-dots" id="pin-dots">
-      <span></span><span></span><span></span><span></span>
+<div class="app">
+  <div class="header">
+    <div class="header-title">SAV INGENIERÍA SAS</div>
+    <div class="header-sub">📋 Jornadas</div>
+    <div class="header-date" id="header-date"></div>
+    <div class="date-nav">
+      <button class="date-nav-btn" onclick="changeDate(-1)">‹</button>
+      <div class="date-label" id="date-label"></div>
+      <button class="date-nav-btn" onclick="changeDate(1)">›</button>
     </div>
-    <div class="mensaje-error" id="msg-pin-candado"></div>
-    <div class="teclado" id="teclado-candado">
-      <button data-n="1">1</button><button data-n="2">2</button><button data-n="3">3</button>
-      <button data-n="4">4</button><button data-n="5">5</button><button data-n="6">6</button>
-      <button data-n="7">7</button><button data-n="8">8</button><button data-n="9">9</button>
-      <button class="borrar" data-n="borrar">Borrar</button><button data-n="0">0</button><button data-n="ok">—</button>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-val" id="stat-prog">—</div><div class="stat-lbl">Programados hoy</div></div>
+      <div class="stat"><div class="stat-val" id="stat-cc">—</div><div class="stat-lbl">Centros activos</div></div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('prog')"><span class="tab-icon">📅</span>Programar</div>
+    <div class="tab" onclick="switchTab('report')"><span class="tab-icon">📊</span>Reporte</div>
+    <div class="tab" onclick="switchTab('proyectos')"><span class="tab-icon">🏗️</span>Proyectos</div>
+    <div class="tab" onclick="switchTab('equipo')"><span class="tab-icon">👥</span>Equipo</div>
+  </div>
+  <div class="content">
+    <div class="view active" id="view-prog">
+      <button class="pdf-btn" style="background:#0891B2;margin-bottom:10px" onclick="abrirRepetir()">📋 Repetir programación de un día anterior</button>
+      <div class="proj-filter" style="margin-bottom:10px">
+        <button class="filter-btn active" id="pm-colab" onclick="setProgMode('colab')">👤 Por colaborador</button>
+        <button class="filter-btn" id="pm-proyecto" onclick="setProgMode('proyecto')">🏗️ Por proyecto</button>
+      </div>
+      <div id="collab-search-wrap">
+        <input class="search-input" id="prog-search" placeholder="🔍 Buscar colaborador..." oninput="renderCollabs()" style="margin-bottom:10px">
+      </div>
+      <div id="collab-list"><div class="loading"><div class="spinner"></div><div style="font-size:13px;color:#6B7280">Cargando...</div></div></div>
+      <div id="proyecto-prog-list" style="display:none"></div>
+    </div>
+    <div class="view" id="view-report">
+      <div class="month-nav">
+        <button class="month-btn" onclick="changeDate(-1);loadReport()">‹ Anterior</button>
+        <div class="month-label" id="month-label"></div>
+        <button class="month-btn" onclick="changeDate(1);loadReport()">Siguiente ›</button>
+      </div>
+      <button class="pdf-btn" onclick="exportPDFDia()">📄 PDF programación del día</button>
+      <button class="pdf-btn" style="background:#2563EB" onclick="openExcelRango()">📊 Exportar Excel (rango de fechas)</button>
+      <button class="pdf-btn" style="background:#7C3AED" onclick="openFIC()">🧮 Reporte FIC (personas por proyecto)</button>
+      <div id="report-content" style="margin-top:12px"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+    <div class="view" id="view-proyectos">
+      <button class="add-btn" onclick="openNuevoProyecto()">＋ Agregar nuevo proyecto</button>
+      <input class="proj-search" id="proj-search" placeholder="🔍 Buscar por código o nombre..." oninput="renderProyectos()">
+      <div class="proj-filter">
+        <button class="filter-btn active" id="filter-todos" onclick="setFilter('todos')">Todos</button>
+        <button class="filter-btn" id="filter-activos" onclick="setFilter('activos')">Activos</button>
+        <button class="filter-btn" id="filter-inactivos" onclick="setFilter('inactivos')">Inactivos</button>
+      </div>
+      <div id="proj-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+    <div class="view" id="view-equipo">
+      <button class="add-btn" onclick="openNuevoColaborador()">＋ Agregar nuevo colaborador</button>
+      <input class="proj-search" id="equipo-search" placeholder="🔍 Buscar por nombre..." oninput="renderEquipo()">
+      <div class="proj-filter">
+        <button class="filter-btn active" id="efilter-todos" onclick="setEFilter('todos')">Todos</button>
+        <button class="filter-btn" id="efilter-activos" onclick="setEFilter('activos')">Activos</button>
+        <button class="filter-btn" id="efilter-inactivos" onclick="setEFilter('inactivos')">Inactivos</button>
+      </div>
+      <div id="equipo-list"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
 </div>
 
-<div id="contenido-principal" class="oculto">
-
-<h1>Validación de Asistencia</h1>
-<p class="subtitulo">Revisa cada marcación con su foto y ubicación, y apruébala o recházala.</p>
-
-<div class="barra">
-  <label>Desde
-    <input id="filtro-desde" type="date">
-  </label>
-  <label>Hasta
-    <input id="filtro-hasta" type="date">
-  </label>
-  <label>Estado
-    <select id="filtro-estado">
-      <option value="pendiente" selected>Pendientes</option>
-      <option value="aprobado">Aprobados</option>
-      <option value="rechazado">Rechazados</option>
-      <option value="todos">Todos</option>
-    </select>
-  </label>
-  <label>Buscar colaborador
-    <input id="filtro-nombre" type="text" placeholder="Nombre…">
-  </label>
-  <span class="contador" id="contador-resultados"></span>
-</div>
-
-<div class="tabla-wrap">
-  <table>
-    <thead>
-      <tr>
-        <th>Foto</th>
-        <th>Colaborador</th>
-        <th>Proyecto</th>
-        <th>Tipo</th>
-        <th>Fecha</th>
-        <th>Hora</th>
-        <th>Tiempo laborado</th>
-        <th>Ubicación</th>
-        <th>Estado</th>
-        <th>Comentario</th>
-        <th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody id="cuerpo-tabla"></tbody>
-  </table>
-  <div class="vacio" id="mensaje-vacio" style="display:none;">No hay registros con estos filtros.</div>
-</div>
-
-<div class="modal-fondo" id="modal-rechazo">
+<!-- MODAL ASIGNACIÓN -->
+<div class="modal-backdrop" id="modal" onclick="closeModalOutside(event)">
   <div class="modal">
-    <h3>Motivo del rechazo</h3>
-    <textarea id="texto-rechazo" placeholder="Ej: la foto no corresponde al colaborador…"></textarea>
-    <div class="modal-botones">
-      <button class="modal-cancelar" id="btn-cancelar-rechazo">Cancelar</button>
-      <button class="modal-confirmar" id="btn-confirmar-rechazo">Rechazar</button>
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-name"></div>
+    <div class="modal-sub" id="modal-date-sub"></div>
+    <div class="section-title">Tipo de asignación</div>
+    <div class="shift-grid" style="grid-template-columns:1fr 1fr;margin-bottom:4px">
+      <div class="shift-opt sel" id="tipo-proyecto" onclick="setTipo('proyecto')"><div class="shift-opt-name">🏗️ Proyecto</div><div class="shift-opt-time">Asignar a obra</div></div>
+      <div class="shift-opt" id="tipo-novedad" onclick="setTipo('novedad')"><div class="shift-opt-name">📋 Novedad</div><div class="shift-opt-time">Ausencia</div></div>
     </div>
+    <div id="seccion-proyecto">
+      <div class="section-title">Turno</div>
+      <div class="shift-grid" id="shift-grid"></div>
+      <div id="horario-section" style="display:none">
+        <div class="section-title">Horario del centro principal</div>
+        <div class="time-hint" id="time-hint"></div>
+        <div class="time-row" style="margin-top:8px">
+          <div class="time-group"><span class="time-label">Entrada</span><input class="time-input" type="time" id="input-entrada" onchange="recalcHint()"></div>
+          <div class="time-group"><span class="time-label">Salida</span><input class="time-input" type="time" id="input-salida" onchange="recalcHint()"></div>
+        </div>
+      </div>
+      <div class="section-title">Centro de costo principal</div>
+      <input class="search-input" id="cc-search" placeholder="🔍 Buscar por código o nombre..." oninput="renderCCList(1)">
+      <div class="cc-list" id="cc-list-1"></div>
+      <div class="split-row">
+        <div><div class="split-label">Jornada partida</div><div class="split-sub">Asignar segundo centro de costo</div></div>
+        <button class="toggle" id="split-toggle" onclick="toggleSplit()"></button>
+      </div>
+      <div id="cc2-section" style="display:none">
+        <div class="section-title">Segundo centro de costo</div>
+        <input class="search-input" id="cc-search2" placeholder="🔍 Buscar segundo centro..." oninput="renderCCList(2)">
+        <div class="cc-list" id="cc-list-2"></div>
+        <div id="horario-section2" style="display:none">
+          <div class="section-title">Horario del segundo centro</div>
+          <div class="time-hint" id="time-hint2"></div>
+          <div class="time-row" style="margin-top:8px">
+            <div class="time-group"><span class="time-label">Entrada</span><input class="time-input" type="time" id="input-entrada2" onchange="recalcHint2()"></div>
+            <div class="time-group"><span class="time-label">Salida</span><input class="time-input" type="time" id="input-salida2" onchange="recalcHint2()"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="seccion-novedad" style="display:none">
+      <div class="section-title">Categoría de ausencia</div>
+      <div class="novedad-grid">
+        <div class="novedad-opt" id="nov-vacaciones" onclick="selNovedad('vacaciones')"><div class="novedad-icon">🏖️</div><div class="novedad-name">Vacaciones</div></div>
+        <div class="novedad-opt" id="nov-incapacidad" onclick="selNovedad('incapacidad')"><div class="novedad-icon">🏥</div><div class="novedad-name">Incapacidad</div></div>
+        <div class="novedad-opt" id="nov-permiso" onclick="selNovedad('permiso')"><div class="novedad-icon">📝</div><div class="novedad-name">Permiso</div></div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="saveAssignment()">✓ Guardar programación</button>
+    <button class="btn btn-danger" id="btn-clear" onclick="clearAssignment()" style="display:none">✕ Quitar asignación</button>
   </div>
 </div>
 
-<div class="modal-fondo" id="modal-eliminar">
+<!-- MODAL NUEVO PROYECTO -->
+<div class="modal-backdrop" id="modal-proyecto" onclick="closeProyectoOutside(event)">
   <div class="modal">
-    <h3>¿Eliminar este registro?</h3>
-    <p style="color:var(--muted); font-size:13.5px; margin:0 0 4px;">
-      Esta acción no se puede deshacer. El registro (foto, hora y ubicación) se borrará por completo.
-    </p>
-    <div class="modal-botones">
-      <button class="modal-cancelar" id="btn-cancelar-eliminar">Cancelar</button>
-      <button class="modal-confirmar" id="btn-confirmar-eliminar">Eliminar</button>
-    </div>
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-proyecto-title">Nuevo proyecto</div>
+    <div class="modal-sub">Completa los datos del centro de costo</div>
+    <div class="form-group"><label class="form-label">Código</label><input class="form-input" id="input-codigo" placeholder="Ej: 921" type="text"></div>
+    <div class="form-group"><label class="form-label">Nombre del proyecto</label><input class="form-input" id="input-nombre" placeholder="Ej: SMART FIT LAURELES MDE" type="text"></div>
+    <button class="btn btn-primary" onclick="guardarProyecto()">✓ Guardar proyecto</button>
   </div>
 </div>
 
-</div><!-- /contenido-principal -->
+<!-- MODAL NUEVO COLABORADOR -->
+<div class="modal-backdrop" id="modal-colaborador" onclick="closeColaboradorOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nuevo colaborador</div>
+    <div class="modal-sub">Ingresa el nombre completo</div>
+    <div class="form-group"><label class="form-label">Nombre completo</label><input class="form-input" id="input-colab-nombre" placeholder="Ej: Juan Pérez Gómez" type="text"></div>
+    <div class="form-group"><label class="form-label">Número de documento</label><input class="form-input" id="input-colab-documento" placeholder="Ej: 71.234.567-8" type="text"></div>
+    <button class="btn btn-primary" onclick="guardarColaborador()">✓ Guardar colaborador</button>
+  </div>
+</div>
 
-<script>
-(function(){
-  "use strict";
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  function $(id){ return document.getElementById(id); }
+<!-- MODAL EXCEL -->
+<div class="modal-backdrop" id="modal-excel-rango" onclick="closeExcelRangoOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Exportar Excel</div>
+    <div class="modal-sub">Selecciona el rango de fechas a incluir</div>
+    <div class="form-group"><label class="form-label">Desde</label><input class="form-input" id="excel-desde" type="date"></div>
+    <div class="form-group"><label class="form-label">Hasta</label><input class="form-input" id="excel-hasta" type="date"></div>
+    <button class="btn btn-primary" onclick="generarExcelRango()">✓ Generar Excel</button>
+  </div>
+</div>
 
-  // ---------- Bloqueo con PIN ----------
-  let pinBuffer = '';
-  function actualizarPuntosPin(){
-    document.querySelectorAll('#pin-dots span').forEach((p, i) => p.classList.toggle('lleno', i < pinBuffer.length));
-  }
-  function desbloquear(){
-    sessionStorage.setItem('validacion_desbloqueada', '1');
-    $('candado-fondo').classList.add('oculto');
-    $('contenido-principal').classList.remove('oculto');
-  }
-  if(sessionStorage.getItem('validacion_desbloqueada') === '1'){
-    desbloquear();
-  }
-  $('teclado-candado').addEventListener('click', (e) => {
-    const btn = e.target.closest('button');
-    if(!btn) return;
-    const n = btn.dataset.n;
-    $('msg-pin-candado').textContent = '';
-    if(n === 'borrar'){ pinBuffer = pinBuffer.slice(0,-1); actualizarPuntosPin(); return; }
-    if(n === 'ok') return;
-    if(pinBuffer.length >= 4) return;
-    pinBuffer += n;
-    actualizarPuntosPin();
-    if(pinBuffer.length === 4){
-      if(pinBuffer === PIN_VALIDACION){
-        desbloquear();
-      } else {
-        $('msg-pin-candado').textContent = 'PIN incorrecto.';
-        pinBuffer = '';
-        actualizarPuntosPin();
-      }
-    }
-  });
-
-  const hoy = new Date().toISOString().slice(0,10);
-  const hace7dias = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
-  $('filtro-desde').value = hace7dias;
-  $('filtro-hasta').value = hoy;
-
-  let registrosActuales = [];
-  let idParaRechazar = null;
-  let mapaCentrosCosto = {}; // id -> nombre
-  let mapaTiempos = {}; // id de registro (salida) -> texto de duración
-  let mapaEsHorasExtra = {}; // "colaboradorId_fecha" -> true/false/null/'sin_base'
-
-  async function cargarCentrosCosto(){
-    const { data, error } = await supabase.from('centros_costo').select('id, nombre');
-    if(!error && data){
-      mapaCentrosCosto = {};
-      data.forEach(c => { mapaCentrosCosto[c.id] = c.nombre; });
-    }
-  }
-
-  function formatearDuracion(ms){
-    if(ms < 0) return '—';
-    const totalMin = Math.round(ms / 60000);
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return `${h}h ${m}m`;
-  }
-
-  function horaAMinutos(horaStr){
-    if(!horaStr) return null;
-    const partes = horaStr.split(':');
-    return parseInt(partes[0], 10) * 60 + parseInt(partes[1], 10);
-  }
-
-  function diferenciaMinutos(entradaStr, salidaStr){
-    const ini = horaAMinutos(entradaStr), fin = horaAMinutos(salidaStr);
-    if(ini === null || fin === null) return 0;
-    let diff = fin - ini;
-    if(diff < 0) diff += 24 * 60; // turno que cruza medianoche
-    return diff;
-  }
-
-  function horaSalidaTurnoAplicable(turno, fecha){
-    const diaSemana = new Date(fecha + 'T00:00:00').getDay(); // 0=domingo … 5=viernes, 6=sábado
-    if(diaSemana === 5) return turno.hora_salida_viernes || turno.hora_salida;
-    if(diaSemana === 6) return turno.hora_salida_sabado || turno.hora_salida;
-    if(diaSemana === 0) return null; // domingo: sin jornada estándar definida
-    return turno.hora_salida;
-  }
-
-  function calcularEstablecidaMinutos(prog, mapaTurnos, fecha){
-    if(!prog) return null;
-    let total = 0;
-    let huboBase = false;
-
-    if(prog.hora_entrada_custom && prog.hora_salida_custom){
-      total += diferenciaMinutos(prog.hora_entrada_custom, prog.hora_salida_custom);
-      huboBase = true;
-    } else if(prog.turno_id && mapaTurnos[prog.turno_id]){
-      const turno = mapaTurnos[prog.turno_id];
-      const salidaAplicable = horaSalidaTurnoAplicable(turno, fecha);
-      if(turno.hora_entrada && salidaAplicable){
-        total += diferenciaMinutos(turno.hora_entrada, salidaAplicable);
-        huboBase = true;
-      }
-    }
-
-    if(prog.hora_entrada_custom2 && prog.hora_salida_custom2){
-      total += diferenciaMinutos(prog.hora_entrada_custom2, prog.hora_salida_custom2);
-      huboBase = true;
-    }
-
-    return huboBase ? total : null;
-  }
-
-  // Calcula, para cada colaborador+fecha en el rango: tiempo laborado real,
-  // si el turno sigue abierto, y cuántos minutos tenía establecidos ese día.
-  async function calcularAnalisisJornadas(desde, hasta){
-    const [registrosRes, turnosRes, programacionRes] = await Promise.all([
-      supabase.from('registros_asistencia')
-        .select('id, colaborador_id, fecha, tipo, hora, estado')
-        .gte('fecha', desde).lte('fecha', hasta).order('hora', { ascending: true }),
-      supabase.from('turnos')
-        .select('id, hora_entrada, hora_salida, hora_salida_viernes, hora_salida_sabado'),
-      supabase.from('programacion')
-        .select('colaborador_id, fecha, turno_id, hora_entrada_custom, hora_salida_custom, hora_entrada_custom2, hora_salida_custom2')
-        .gte('fecha', desde).lte('fecha', hasta)
-    ]);
-
-    const mapaTurnos = {};
-    (turnosRes.data || []).forEach(t => { mapaTurnos[t.id] = t; });
-
-    const mapaProgramacion = {};
-    (programacionRes.data || []).forEach(p => { mapaProgramacion[p.colaborador_id + '_' + p.fecha] = p; });
-
-    const datos = registrosRes.data || [];
-    const grupos = {};
-    datos.forEach(r => {
-      const clave = r.colaborador_id + '_' + r.fecha;
-      if(!grupos[clave]) grupos[clave] = [];
-      grupos[clave].push(r);
-    });
-
-    const mapaTiempos = {};
-    const mapaTotalMinPorDia = {};
-    const mapaAbiertoPorDia = {};
-    const mapaTienePendientePorDia = {};
-    const mapaEstablecidaPorDia = {};
-
-    Object.entries(grupos).forEach(([clave, lista]) => {
-      let ingresoAbierto = null;
-      let totalMs = 0;
-      let tienePendiente = false;
-      lista.forEach(r => {
-        if(r.estado === 'pendiente') tienePendiente = true;
-        if(r.tipo === 'ingreso'){
-          ingresoAbierto = r;
-        } else if(r.tipo === 'salida' && ingresoAbierto){
-          const ms = new Date(r.hora) - new Date(ingresoAbierto.hora);
-          mapaTiempos[r.id] = formatearDuracion(ms);
-          totalMs += ms;
-          ingresoAbierto = null;
-        }
-      });
-      mapaTotalMinPorDia[clave] = Math.round(totalMs / 60000);
-      mapaAbiertoPorDia[clave] = !!ingresoAbierto;
-      mapaTienePendientePorDia[clave] = tienePendiente;
-
-      const fecha = clave.split('_')[1];
-      mapaEstablecidaPorDia[clave] = calcularEstablecidaMinutos(mapaProgramacion[clave], mapaTurnos, fecha);
-    });
-
-    return { mapaTiempos, mapaTotalMinPorDia, mapaAbiertoPorDia, mapaTienePendientePorDia, mapaEstablecidaPorDia };
-  }
-
-  async function cargarRegistros(){
-    const desde = $('filtro-desde').value;
-    const hasta = $('filtro-hasta').value;
-    const estado = $('filtro-estado').value;
-    const TOLERANCIA_MIN = 1;
-
-    const analisis = await calcularAnalisisJornadas(desde, hasta);
-    mapaTiempos = analisis.mapaTiempos;
-
-    // Determinar qué días (colaborador+fecha) no tuvieron horas extra y siguen con
-    // registros pendientes, para aprobarlos automáticamente.
-    const clavesAutoAprobar = Object.keys(analisis.mapaTotalMinPorDia).filter(clave => {
-      if(!analisis.mapaTienePendientePorDia[clave]) return false; // nada pendiente, no hay nada que hacer
-      if(analisis.mapaAbiertoPorDia[clave]) return false; // turno en curso, aún no se puede evaluar
-      const establecido = analisis.mapaEstablecidaPorDia[clave];
-      if(establecido === null) return false; // sin jornada definida ese día, requiere revisión manual
-      return analisis.mapaTotalMinPorDia[clave] <= establecido + TOLERANCIA_MIN;
-    });
-
-    await Promise.all(clavesAutoAprobar.map(clave => {
-      const partes = clave.split('_');
-      const colaboradorId = partes[0];
-      const fecha = partes.slice(1).join('_');
-      return supabase.from('registros_asistencia').update({
-        estado: 'aprobado',
-        validado_por: 'Automático (sin horas extra)',
-        fecha_validacion: new Date().toISOString()
-      }).eq('colaborador_id', colaboradorId).eq('fecha', fecha).eq('estado', 'pendiente');
-    }));
-
-    // Guardar, por día, si tuvo horas extra (para decidir si se muestran botones)
-    mapaEsHorasExtra = {};
-    Object.keys(analisis.mapaTotalMinPorDia).forEach(clave => {
-      if(analisis.mapaAbiertoPorDia[clave]){ mapaEsHorasExtra[clave] = null; return; }
-      const establecido = analisis.mapaEstablecidaPorDia[clave];
-      if(establecido === null){ mapaEsHorasExtra[clave] = 'sin_base'; return; }
-      mapaEsHorasExtra[clave] = analisis.mapaTotalMinPorDia[clave] > establecido + TOLERANCIA_MIN;
-    });
-
-    let consulta = supabase
-      .from('registros_asistencia')
-      .select('*, colaboradores(nombre)')
-      .order('hora', { ascending: false });
-
-    if(desde) consulta = consulta.gte('fecha', desde);
-    if(hasta) consulta = consulta.lte('fecha', hasta);
-    if(estado !== 'todos') consulta = consulta.eq('estado', estado);
-
-    const { data, error } = await consulta;
-    if(error){
-      $('mensaje-vacio').style.display = 'block';
-      $('mensaje-vacio').textContent = 'Error al cargar: ' + error.message;
-      $('cuerpo-tabla').innerHTML = '';
-      return;
-    }
-    registrosActuales = data || [];
-    renderizarTabla();
-  }
-
-  function renderizarTabla(){
-    const filtroNombre = $('filtro-nombre').value.trim().toLowerCase();
-    const filtrados = registrosActuales.filter(r => {
-      const nombre = (r.colaboradores && r.colaboradores.nombre) ? r.colaboradores.nombre.toLowerCase() : '';
-      return nombre.includes(filtroNombre);
-    });
-
-    $('contador-resultados').textContent = filtrados.length + ' registro(s)';
-    const cuerpo = $('cuerpo-tabla');
-    cuerpo.innerHTML = '';
-
-    if(filtrados.length === 0){
-      $('mensaje-vacio').style.display = 'block';
-      $('mensaje-vacio').textContent = 'No hay registros con estos filtros.';
-      return;
-    }
-    $('mensaje-vacio').style.display = 'none';
-
-    filtrados.forEach(r => {
-      const tr = document.createElement('tr');
-      const nombre = r.colaboradores ? r.colaboradores.nombre : '(colaborador no encontrado)';
-      const fechaHora = new Date(r.hora);
-      const horaTexto = fechaHora.toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
-
-      const gpsHtml = (r.lat && r.lng)
-        ? `<a class="gps-link" target="_blank" href="https://maps.google.com/?q=${r.lat},${r.lng}">Ver mapa</a>`
-        : `<span class="sin-gps">Sin ubicación</span>`;
-
-      const fotoHtml = r.foto_url
-        ? `<img class="foto-mini" src="${r.foto_url}" loading="lazy">`
-        : `<span class="sin-gps">—</span>`;
-
-      const nombreProyecto = mapaCentrosCosto[r.centro_costo_id] || '<span class="sin-gps">Sin asignar</span>';
-      const claveDia = r.colaborador_id + '_' + r.fecha;
-      const esHorasExtra = mapaEsHorasExtra[claveDia];
-
-      let tiempoLaborado = (r.tipo === 'salida' && mapaTiempos[r.id]) ? mapaTiempos[r.id] : '<span class="sin-gps">—</span>';
-      if(r.tipo === 'salida' && esHorasExtra === true){
-        tiempoLaborado += ' <span style="color:var(--pendiente); font-weight:700;">⚠️ extra</span>';
-      }
-
-      const botonEliminar = `<button class="btn-eliminar" data-id="${r.id}" data-accion="eliminar">Eliminar</button>`;
-      const requiereRevisionManual = esHorasExtra === true || esHorasExtra === 'sin_base';
-
-      let accionesHtml;
-      if(r.estado === 'pendiente' && requiereRevisionManual){
-        accionesHtml = `<div class="acciones">
-             <button class="btn-aprobar" data-id="${r.id}" data-accion="aprobar">Aprobar</button>
-             <button class="btn-rechazar" data-id="${r.id}" data-accion="rechazar">Rechazar</button>
-             ${botonEliminar}
-           </div>`;
-      } else if(r.estado === 'pendiente' && esHorasExtra === null){
-        accionesHtml = `<div class="acciones">
-             <span class="validador">Turno en curso</span>
-             ${botonEliminar}
-           </div>`;
-      } else {
-        accionesHtml = `<div class="acciones">
-             <span class="validador">${r.validado_por || ''}</span>
-             ${botonEliminar}
-           </div>`;
-      }
-
-      tr.innerHTML = `
-        <td>${fotoHtml}</td>
-        <td>${nombre}</td>
-        <td>${nombreProyecto}</td>
-        <td><span class="chip ${r.tipo}">${r.tipo === 'ingreso' ? 'Ingreso' : 'Salida'}</span></td>
-        <td>${r.fecha}</td>
-        <td>${horaTexto}</td>
-        <td>${tiempoLaborado}</td>
-        <td>${gpsHtml}</td>
-        <td><span class="chip ${r.estado}">${r.estado}</span></td>
-        <td class="comentario">${r.comentario_validacion || ''}</td>
-        <td>${accionesHtml}</td>
-      `;
-      cuerpo.appendChild(tr);
-    });
-
-    cuerpo.querySelectorAll('[data-accion="aprobar"]').forEach(btn => {
-      btn.addEventListener('click', () => aprobar(btn.dataset.id));
-    });
-    cuerpo.querySelectorAll('[data-accion="rechazar"]').forEach(btn => {
-      btn.addEventListener('click', () => abrirModalRechazo(btn.dataset.id));
-    });
-    cuerpo.querySelectorAll('[data-accion="eliminar"]').forEach(btn => {
-      btn.addEventListener('click', () => abrirModalEliminar(btn.dataset.id));
-    });
-  }
-
-  function nombreValidador(){
-    return NOMBRE_VALIDADOR;
-  }
-
-  async function aprobar(id){
-    const { error } = await supabase.from('registros_asistencia').update({
-      estado: 'aprobado',
-      validado_por: nombreValidador(),
-      fecha_validacion: new Date().toISOString()
-    }).eq('id', id);
-    if(error){ alert('No se pudo aprobar: ' + error.message); return; }
-    cargarRegistros();
-  }
-
-  function abrirModalRechazo(id){
-    idParaRechazar = id;
-    $('texto-rechazo').value = '';
-    $('modal-rechazo').classList.add('activo');
-  }
-  $('btn-cancelar-rechazo').addEventListener('click', () => {
-    $('modal-rechazo').classList.remove('activo');
-    idParaRechazar = null;
-  });
-  $('btn-confirmar-rechazo').addEventListener('click', async () => {
-    if(!idParaRechazar) return;
-    const { error } = await supabase.from('registros_asistencia').update({
-      estado: 'rechazado',
-      comentario_validacion: $('texto-rechazo').value.trim(),
-      validado_por: nombreValidador(),
-      fecha_validacion: new Date().toISOString()
-    }).eq('id', idParaRechazar);
-    $('modal-rechazo').classList.remove('activo');
-    idParaRechazar = null;
-    if(error){ alert('No se pudo rechazar: ' + error.message); return; }
-    cargarRegistros();
-  });
-
-  let idParaEliminar = null;
-  let rutaFotoParaEliminar = null;
-
-  function abrirModalEliminar(id){
-    idParaEliminar = id;
-    const registro = registrosActuales.find(r => r.id === id);
-    rutaFotoParaEliminar = (registro && registro.colaborador_id)
-      ? `${registro.colaborador_id}/${registro.id}.jpg`
-      : null;
-    $('modal-eliminar').classList.add('activo');
-  }
-  $('btn-cancelar-eliminar').addEventListener('click', () => {
-    $('modal-eliminar').classList.remove('activo');
-    idParaEliminar = null;
-  });
-  $('btn-confirmar-eliminar').addEventListener('click', async () => {
-    if(!idParaEliminar) return;
-    const { error } = await supabase.from('registros_asistencia').delete().eq('id', idParaEliminar);
-    if(error){
-      alert('No se pudo eliminar: ' + error.message);
-      $('modal-eliminar').classList.remove('activo');
-      idParaEliminar = null;
-      return;
-    }
-    if(rutaFotoParaEliminar){
-      await supabase.storage.from('fotos-asistencia').remove([rutaFotoParaEliminar]);
-    }
-    $('modal-eliminar').classList.remove('activo');
-    idParaEliminar = null;
-    cargarRegistros();
-  });
-
-  ['filtro-desde','filtro-hasta','filtro-estado'].forEach(id => {
-    $(id).addEventListener('change', cargarRegistros);
-  });
-  $('filtro-nombre').addEventListener('input', renderizarTabla);
-
-  (async function iniciar(){
-    await cargarCentrosCosto();
-    await cargarRegistros();
-  })();
-})();
-</script>
-</body>
-</html>
+<!-- MODAL FIC -->
+<div class="modal-backdrop" id="modal-fic" onclick="closeFICOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Reporte FIC</div>
+    <div class="modal-sub">Colaboradores distintos por proyecto en el rango seleccionado</div>
+    <div class="form-group"><label class="form-label">Desde</label><input class="form-input" id="fic-desde" type="date"></div>
+    <div class="form-group"><label class="form-label">Hasta</label><input class="form-input" id="fic-hasta" type="date"></div>
+    <div class="form-group"><label class="form-label">Centro de costos</label><select class="form-input" id="fic-ce
