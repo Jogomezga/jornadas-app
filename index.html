@@ -175,6 +175,9 @@
         <input class="search-input" id="prog-search" placeholder="🔍 Buscar colaborador..." oninput="renderCollabs()" style="margin-bottom:10px">
       </div>
       <div id="collab-list"><div class="loading"><div class="spinner"></div><div style="font-size:13px;color:#6B7280">Cargando...</div></div></div>
+      <div id="proyecto-prog-search-wrap" style="display:none">
+        <input class="search-input" id="proyecto-prog-search" placeholder="🔍 Buscar proyecto por código o nombre..." oninput="renderProyectoProg()" style="margin-bottom:10px">
+      </div>
       <div id="proyecto-prog-list" style="display:none"></div>
     </div>
     <div class="view" id="view-report">
@@ -715,11 +718,33 @@ async function ejecutarRepetir(){
 }
 
 // MODO POR PROYECTO
-function setProgMode(m){progMode=m;document.getElementById('pm-colab').classList.toggle('active',m==='colab');document.getElementById('pm-proyecto').classList.toggle('active',m==='proyecto');document.getElementById('collab-search-wrap').style.display=m==='colab'?'':'none';document.getElementById('collab-list').style.display=m==='colab'?'':'none';document.getElementById('proyecto-prog-list').style.display=m==='proyecto'?'':'none';if(m==='proyecto')renderProyectoProg();}
+function setProgMode(m){progMode=m;document.getElementById('pm-colab').classList.toggle('active',m==='colab');document.getElementById('pm-proyecto').classList.toggle('active',m==='proyecto');document.getElementById('collab-search-wrap').style.display=m==='colab'?'':'none';document.getElementById('collab-list').style.display=m==='colab'?'':'none';document.getElementById('proyecto-prog-search-wrap').style.display=m==='proyecto'?'':'none';document.getElementById('proyecto-prog-list').style.display=m==='proyecto'?'':'none';if(m==='proyecto'){document.getElementById('proyecto-prog-search').value='';renderProyectoProg();}}
 function renderProyectoProg(){
-  const activos=centros.slice().sort((a,b)=>b.codigo.localeCompare(a.codigo,undefined,{numeric:true}));
-  if(!activos.length){document.getElementById('proyecto-prog-list').innerHTML='<div class="empty">No hay proyectos activos</div>';return;}
-  document.getElementById('proyecto-prog-list').innerHTML=activos.map(c=>{let count=0;colaboradores.forEach(col=>{const asn=programacion[col.id];if(asn&&!asn.novedad&&(asn.centro_costo_id===c.id||asn.centro_costo_id2===c.id))count++;});return`<div class="proj-card" style="cursor:pointer" onclick="abrirAsignarProyecto(${c.id})"><div class="proj-info"><div class="proj-code">${c.codigo}</div><div class="proj-name">${c.nombre}</div></div><div style="font-size:13px;color:${count?'var(--primary)':'var(--gray-400)'};font-weight:600;flex-shrink:0">${count} 👤</div></div>`;}).join('');
+  const q=(document.getElementById('proyecto-prog-search')?.value||'').toLowerCase();
+  let activos=centros.slice();
+  if(q) activos=activos.filter(c=>c.codigo.toLowerCase().includes(q)||c.nombre.toLowerCase().includes(q));
+  if(!activos.length){document.getElementById('proyecto-prog-list').innerHTML='<div class="empty">No hay proyectos que coincidan</div>';return;}
+
+  // Calcular conteo por proyecto
+  const conConteo=activos.map(c=>{
+    let count=0;
+    colaboradores.forEach(col=>{const asn=programacion[col.id];if(asn&&!asn.novedad&&(asn.centro_costo_id===c.id||asn.centro_costo_id2===c.id))count++;});
+    return{...c,count};
+  });
+
+  // Ordenar: primero con programación (desc por count), luego sin (por código desc)
+  conConteo.sort((a,b)=>{
+    const aHas=a.count>0, bHas=b.count>0;
+    if(aHas&&!bHas) return -1;
+    if(!aHas&&bHas) return 1;
+    return b.codigo.localeCompare(a.codigo,undefined,{numeric:true});
+  });
+
+  document.getElementById('proyecto-prog-list').innerHTML=conConteo.map(c=>`
+    <div class="proj-card" style="cursor:pointer" onclick="abrirAsignarProyecto(${c.id})">
+      <div class="proj-info"><div class="proj-code">${c.codigo}</div><div class="proj-name">${c.nombre}</div></div>
+      <div style="font-size:13px;color:${c.count?'var(--primary)':'var(--gray-400)'};font-weight:600;flex-shrink:0">${c.count} 👤</div>
+    </div>`).join('');
 }
 
 function abrirAsignarProyecto(projectId){
