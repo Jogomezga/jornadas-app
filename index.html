@@ -365,6 +365,7 @@ const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 let colaboradores=[],colaboradoresTodos=[],centros=[],centrosTodos=[],turnos=[],programacion={};
+let semanaHoras={}; // horas programadas en la semana por colaborador_id
 let currentDate=new Date(),currentMonth=new Date();
 let currentColabIdx=null,splitOn=false,selShift=null,selCC=null,selCC2=null;
 let tipoAsignacion='proyecto',selNovedad_val=null;
@@ -416,13 +417,67 @@ function updateDateLabels(){
   document.getElementById('header-date').textContent=DAYS[d.getDay()]+', '+d.getDate()+' de '+MONTHS[d.getMonth()]+' '+d.getFullYear();
 }
 
+function getInicioSemana(fecha){
+  const d=new Date(fecha);
+  const dia=d.getDay(); // 0=Dom,1=Lun,...,6=Sab
+  const diffLunes=dia===0?-6:1-dia; // retroceder al lunes
+  d.setDate(d.getDate()+diffLunes);
+  return d;
+}
+
+function calcHorasRegistro(r, fechaStr){
+  if(r.novedad) return 0;
+  if(r.hora_entrada_custom&&r.hora_salida_custom){
+    const[h1,m1]=r.hora_entrada_custom.split(':').map(Number);
+    const[h2,m2]=r.hora_salida_custom.split(':').map(Number);
+    return Math.max(0,(h2*60+m2-h1*60-m1)/60);
+  }
+  const turno=turnos.find(t=>t.id===r.turno_id);
+  if(!turno) return 0;
+  if(turno.nombre==='Normal'){
+    const h=horarioNormal(new Date(fechaStr+'T12:00:00'));
+    const[h1,m1]=h.entrada.split(':').map(Number);
+    const[h2,m2]=h.salida.split(':').map(Number);
+    return Math.max(0,(h2*60+m2-h1*60-m1)/60);
+  }
+  const[h1,m1]=turno.hora_entrada.split(':').map(Number);
+  const[h2,m2]=turno.hora_salida.split(':').map(Number);
+  let hrs=(h2*60+m2-h1*60-m1)/60;
+  if(hrs<0) hrs+=24; // turno nocturno que cruza medianoche
+  return Math.max(0,hrs);
+}
+
 async function loadProgramacion(){
   document.getElementById('collab-list').innerHTML='<div class="loading"><div class="spinner"></div><div style="font-size:13px;color:#6B7280">Cargando...</div></div>';
   const key=dateKey(currentDate);
-  const{data,error}=await sb.from('programacion').select('*').eq('fecha',key);
-  if(error){showError('programacion: '+error.message);return;}
+
+  // Calcular rango de la semana (lunes a domingo)
+  const lunes=getInicioSemana(currentDate);
+  const domingo=new Date(lunes);domingo.setDate(domingo.getDate()+6);
+  const desdeKey=dateKey(lunes);
+  const hastaKey=dateKey(domingo);
+
+  const[{data:diaData,error:e1},{data:semData,error:e2}]=await Promise.all([
+    sb.from('programacion').select('*').eq('fecha',key),
+    sb.from('programacion').select('colaborador_id,fecha,turno_id,hora_entrada_custom,hora_salida_custom,hora_entrada_custom2,hora_salida_custom2,novedad').gte('fecha',desdeKey).lte('fecha',hastaKey)
+  ]);
+  if(e1){showError('programacion: '+e1.message);return;}
   programacion={};
-  (data||[]).forEach(r=>{programacion[r.colaborador_id]=r;});
+  (diaData||[]).forEach(r=>{programacion[r.colaborador_id]=r;});
+
+  // Calcular horas semanales por colaborador
+  semanaHoras={};
+  (semData||[]).forEach(r=>{
+    if(!semanaHoras[r.colaborador_id]) semanaHoras[r.colaborador_id]=0;
+    semanaHoras[r.colaborador_id]+=calcHorasRegistro(r,r.fecha);
+    // Segunda jornada si hay CC2
+    if(r.hora_entrada_custom2&&r.hora_salida_custom2){
+      const[h1,m1]=r.hora_entrada_custom2.split(':').map(Number);
+      const[h2,m2]=r.hora_salida_custom2.split(':').map(Number);
+      semanaHoras[r.colaborador_id]+=Math.max(0,(h2*60+m2-h1*60-m1)/60);
+    }
+  });
+
   renderCollabs();
   if(progMode==='proyecto')renderProyectoProg();
 }
@@ -445,6 +500,17 @@ function getHorarioReal2(asn){
 }
 
 const NOVEDAD_LABEL={vacaciones:'🏖️ Vacaciones',incapacidad:'🏥 Incapacidad',permiso:'📝 Permiso'};
+
+function horasTag(colabId){
+  const hrs=semanaHoras[colabId]||0;
+  const hrsRedondeadas=Math.round(hrs*10)/10;
+  if(hrs===0) return '';
+  let color,bg,texto;
+  if(Math.abs(hrs-42)<0.1){color='#065F46';bg='#D1FAE5';texto='✓ '+hrsRedondeadas+'h / 42h';}
+  else if(hrs>42){color='#991B1B';bg='#FEE2E2';texto='⚠ '+hrsRedondeadas+'h / 42h';}
+  else{color='#92400E';bg='#FEF3C7';texto='◑ '+hrsRedondeadas+'h / 42h';}
+  return`<div style="display:inline-flex;align-items:center;gap:4px;font-size:11px;background:${bg};color:${color};padding:3px 8px;border-radius:20px;margin-top:4px;font-weight:500">⏱ Semana: ${texto}</div>`;
+}
 
 function renderCollabs(){
   const prog=Object.keys(programacion).length;
@@ -476,7 +542,7 @@ function renderCollabs(){
         <div class="avatar ${AVC[i%6]}">${av}</div>
         <div class="card-info"><div class="card-name">${c.nombre}</div><div class="card-doc">CC ${c.documento||'—'}</div><div class="card-cc">${ccLabel}</div></div>
         ${badge}
-      </div>${shiftTag}</div>`};
+      </div>${shiftTag}${horasTag(c.id)}</div>`};
   });
   const filtrados=q?cards.filter(x=>x.nombre.toLowerCase().includes(q)):cards;
   document.getElementById('collab-list').innerHTML=filtrados.length?filtrados.map(x=>x.html).join(''):'<div class="empty">No hay colaboradores que coincidan</div>';
