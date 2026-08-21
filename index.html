@@ -669,12 +669,23 @@ async function generarExcelRango(){
   if(!desde||!hasta){showToast('Selecciona ambas fechas');return;}if(desde>hasta){showToast('Fecha inicial debe ser menor');return;}showToast('Generando Excel...');
   const{data,error}=await sb.from('programacion').select('fecha,colaborador_id,novedad,hora_entrada_custom,hora_salida_custom,hora_entrada_custom2,hora_salida_custom2,turno:turno_id(nombre,hora_entrada,hora_salida),cc1:centro_costo_id(codigo,nombre),cc2:centro_costo_id2(codigo,nombre)').gte('fecha',desde).lte('fecha',hasta).order('fecha');
   if(error){showToast('Error: '+error.message);return;}if(!data||!data.length){showToast('No hay programación en ese rango');return;}
+  // Calcula horario correcto según día de semana para turno Normal
+  function calcHorarioExcel(fecha, turno, entradaC, salidaC){
+    if(entradaC&&salidaC) return{e:entradaC.slice(0,8),s:salidaC.slice(0,8)};
+    if(turno?.nombre==='Normal'){
+      const dia=new Date(fecha+'T12:00:00').getDay();
+      const s=dia===5?'13:15:00':dia===6?'11:00:00':'16:00:00';
+      return{e:'07:00:00',s};
+    }
+    return{e:turno?.hora_entrada||'',s:turno?.hora_salida||''};
+  }
+
   const rows=[];
   data.forEach(r=>{const nombre=nombreColab(r.colaborador_id),doc=documentoColab(r.colaborador_id);
     if(r.novedad){rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:doc,Proyecto:'',Turno:'',Entrada:'',Salida:'',Novedad:labelNovedad(r.novedad)});return;}
-    const e=r.hora_entrada_custom||r.turno?.hora_entrada||'',s=r.hora_salida_custom||r.turno?.hora_salida||'';
+    const{e,s}=calcHorarioExcel(r.fecha,r.turno,r.hora_entrada_custom,r.hora_salida_custom);
     if(r.cc1)rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:doc,Proyecto:r.cc1.codigo+' - '+r.cc1.nombre,Turno:r.turno?.nombre||'',Entrada:e,Salida:s,Novedad:''});
-    if(r.cc2){const e2=r.hora_entrada_custom2||r.turno?.hora_entrada||'',s2=r.hora_salida_custom2||r.turno?.hora_salida||'';rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:doc,Proyecto:r.cc2.codigo+' - '+r.cc2.nombre,Turno:r.turno?.nombre||'',Entrada:e2,Salida:s2,Novedad:''});}
+    if(r.cc2){const h2=calcHorarioExcel(r.fecha,r.turno,r.hora_entrada_custom2,r.hora_salida_custom2);rows.push({Fecha:r.fecha,Colaborador:nombre,Documento:doc,Proyecto:r.cc2.codigo+' - '+r.cc2.nombre,Turno:r.turno?.nombre||'',Entrada:h2.e,Salida:h2.s,Novedad:''});}
   });
   rows.sort((a,b)=>a.Fecha.localeCompare(b.Fecha)||a.Colaborador.localeCompare(b.Colaborador));
   const ws=XLSX.utils.json_to_sheet(rows);ws['!cols']=[{wch:11},{wch:28},{wch:16},{wch:34},{wch:12},{wch:9},{wch:9},{wch:14}];
