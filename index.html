@@ -451,11 +451,10 @@ async function loadProgramacion(){
   document.getElementById('collab-list').innerHTML='<div class="loading"><div class="spinner"></div><div style="font-size:13px;color:#6B7280">Cargando...</div></div>';
   const key=dateKey(currentDate);
 
-  // Calcular rango de la semana (lunes a domingo)
+  // Calcular rango: desde el lunes de la semana hasta el día consultado
   const lunes=getInicioSemana(currentDate);
-  const domingo=new Date(lunes);domingo.setDate(domingo.getDate()+6);
   const desdeKey=dateKey(lunes);
-  const hastaKey=dateKey(domingo);
+  const hastaKey=key; // hasta el día actual consultado, no hasta el domingo
 
   const[{data:diaData,error:e1},{data:semData,error:e2}]=await Promise.all([
     sb.from('programacion').select('*').eq('fecha',key),
