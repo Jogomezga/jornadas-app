@@ -189,6 +189,7 @@
       <button class="pdf-btn" onclick="exportPDFDia()">📄 PDF programación del día</button>
       <button class="pdf-btn" style="background:#2563EB" onclick="openExcelRango()">📊 Exportar Excel (rango de fechas)</button>
       <button class="pdf-btn" style="background:#7C3AED" onclick="openFIC()">🧮 Reporte FIC (personas por proyecto)</button>
+      <button class="pdf-btn" style="background:#B45309" onclick="openQuincena()">📋 Reporte Quincena (días por CC)</button>
       <div id="report-content" style="margin-top:12px"><div class="loading"><div class="spinner"></div></div></div>
     </div>
     <div class="view" id="view-proyectos">
@@ -319,7 +320,30 @@
   </div>
 </div>
 
-<!-- MODAL REPETIR -->
+<!-- MODAL QUINCENA -->
+<div class="modal-backdrop" id="modal-quincena" onclick="closeQuincenaOutside(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Reporte Quincena</div>
+    <div class="modal-sub">Días trabajados por colaborador en cada centro de costo</div>
+    <div class="form-group">
+      <label class="form-label">Año</label>
+      <select class="form-input" id="quincena-anio"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Mes</label>
+      <select class="form-input" id="quincena-mes"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Quincena</label>
+      <select class="form-input" id="quincena-periodo">
+        <option value="1">Primera quincena (1 al 15)</option>
+        <option value="2">Segunda quincena (16 al último día)</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="generarQuincena()">✓ Generar reporte</button>
+  </div>
+</div>
 <div class="modal-backdrop" id="modal-repetir" onclick="closeRepetirOutside(event)">
   <div class="modal">
     <div class="modal-handle"></div>
@@ -779,7 +803,84 @@ async function generarFIC(){
   XLSX.writeFile(wb,nf);document.getElementById('modal-fic').classList.remove('open');showToast('✓ Reporte FIC descargado');
 }
 
-// REPETIR
+// QUINCENA
+function openQuincena(){
+  const hoy=new Date();
+  // Poblar años (año actual y 2 anteriores)
+  const anioSel=document.getElementById('quincena-anio');
+  anioSel.innerHTML='';
+  for(let a=hoy.getFullYear();a>=hoy.getFullYear()-2;a--){
+    const opt=document.createElement('option');opt.value=a;opt.textContent=a;anioSel.appendChild(opt);
+  }
+  // Poblar meses
+  const mesSel=document.getElementById('quincena-mes');
+  mesSel.innerHTML=MONTHS.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+  mesSel.value=hoy.getMonth();
+  // Seleccionar quincena según día actual
+  document.getElementById('quincena-periodo').value=hoy.getDate()<=15?'1':'2';
+  document.getElementById('modal-quincena').classList.add('open');
+}
+function closeQuincenaOutside(e){if(e.target===document.getElementById('modal-quincena'))document.getElementById('modal-quincena').classList.remove('open');}
+
+async function generarQuincena(){
+  const anio=parseInt(document.getElementById('quincena-anio').value);
+  const mes=parseInt(document.getElementById('quincena-mes').value);
+  const periodo=document.getElementById('quincena-periodo').value;
+  const desdeDay=periodo==='1'?1:16;
+  const hastaDay=periodo==='1'?15:new Date(anio,mes+1,0).getDate();
+  const desde=`${anio}-${String(mes+1).padStart(2,'0')}-${String(desdeDay).padStart(2,'0')}`;
+  const hasta=`${anio}-${String(mes+1).padStart(2,'0')}-${String(hastaDay).padStart(2,'0')}`;
+  showToast('Generando reporte quincena...');
+
+  const{data,error}=await sb.from('programacion')
+    .select('fecha,colaborador_id,centro_costo_id,centro_costo_id2,novedad')
+    .gte('fecha',desde).lte('fecha',hasta).is('novedad',null);
+  if(error){showToast('Error: '+error.message);return;}
+  if(!data||!data.length){showToast('No hay programación en esa quincena');return;}
+
+  // Contar días únicos por colaborador+centro
+  const mapa={}; // key: "colabId|centroId" → Set de fechas
+  data.forEach(r=>{
+    [r.centro_costo_id,r.centro_costo_id2].forEach(cid=>{
+      if(!cid)return;
+      const k=r.colaborador_id+'|'+cid;
+      if(!mapa[k])mapa[k]=new Set();
+      mapa[k].add(r.fecha);
+    });
+  });
+
+  // Construir filas ordenadas por colaborador luego por código CC
+  const rows=[];
+  Object.entries(mapa).forEach(([k,fechas])=>{
+    const[colabId,centroId]=k.split('|').map(Number);
+    const colab=colaboradoresTodos.find(c=>c.id===colabId);
+    const centro=centrosTodos.find(c=>c.id===centroId);
+    rows.push({
+      Colaborador:colab?.nombre||'(eliminado)',
+      Documento:colab?.documento||'',
+      'Código CC':centro?.codigo||centroId,
+      'Centro de Costo':centro?.nombre||'(eliminado)',
+      'Días trabajados':fechas.size
+    });
+  });
+  rows.sort((a,b)=>a.Colaborador.localeCompare(b.Colaborador)||a['Código CC'].localeCompare(String(b['Código CC']),undefined,{numeric:true}));
+
+  // Generar Excel
+  const ws=XLSX.utils.json_to_sheet(rows);
+  ws['!cols']=[{wch:28},{wch:14},{wch:10},{wch:38},{wch:14}];
+
+  // Título en la primera fila
+  XLSX.utils.sheet_add_aoa(ws,[
+    [`Reporte Quincena ${periodo==='1'?'1 (1-15)':'2 (16-'+hastaDay+')'} — ${MONTHS[mes]} ${anio}`]
+  ],{origin:'A1'});
+  XLSX.utils.sheet_add_json(ws,rows,{origin:'A2',skipHeader:false});
+
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,`Quincena ${periodo}`);
+  XLSX.writeFile(wb,`quincena_${periodo}_${MONTHS[mes]}_${anio}.xlsx`);
+  document.getElementById('modal-quincena').classList.remove('open');
+  showToast('✓ Reporte quincena descargado');
+}
 function abrirRepetir(){const ant=new Date(currentDate);ant.setDate(ant.getDate()-1);document.getElementById('repetir-sub').textContent='Se copiará hacia '+DAYS_S[currentDate.getDay()]+' '+currentDate.getDate()+' '+MONTHS[currentDate.getMonth()].slice(0,3)+' (día actual en la app)';document.getElementById('repetir-origen').value=dateKey(ant);document.getElementById('repetir-origen').max=dateKey(ant);document.getElementById('repetir-sobrescribir').checked=false;document.getElementById('modal-repetir').classList.add('open');}
 function closeRepetirOutside(e){if(e.target===document.getElementById('modal-repetir'))document.getElementById('modal-repetir').classList.remove('open');}
 async function ejecutarRepetir(){
