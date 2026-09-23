@@ -825,35 +825,68 @@ async function generarQuincena(){
   if(error){showToast('Error: '+error.message);return;}
   if(!data||!data.length){showToast('No hay programación en ese mes');return;}
 
-  const mapa={};
+  // Agrupar días reales por colaborador → centro
+  const mapa={}; // colabId → { centroId → Set<fecha> }
   data.forEach(r=>{
+    if(!mapa[r.colaborador_id]) mapa[r.colaborador_id]={};
     [r.centro_costo_id,r.centro_costo_id2].forEach(cid=>{
-      if(!cid)return;
-      const k=r.colaborador_id+'|'+cid;
-      if(!mapa[k])mapa[k]=new Set();
-      mapa[k].add(r.fecha);
+      if(!cid) return;
+      if(!mapa[r.colaborador_id][cid]) mapa[r.colaborador_id][cid]=new Set();
+      mapa[r.colaborador_id][cid].add(r.fecha);
     });
   });
 
+  const TOTAL=30;
   const rows=[];
-  Object.entries(mapa).forEach(([k,fechas])=>{
-    const[colabId,centroId]=k.split('|').map(Number);
-    const colab=colaboradoresTodos.find(c=>c.id===colabId);
-    const centro=centrosTodos.find(c=>c.id===centroId);
-    rows.push({
-      Colaborador:colab?.nombre||'(eliminado)',
-      Documento:colab?.documento||'',
-      'Código CC':centro?.codigo||centroId,
-      'Centro de Costo':centro?.nombre||'(eliminado)',
-      'Días trabajados':fechas.size
+
+  Object.entries(mapa).forEach(([colabId,centrosMap])=>{
+    const colab=colaboradoresTodos.find(c=>c.id===parseInt(colabId));
+    const entradas=Object.entries(centrosMap).map(([cid,fechas])=>({
+      centroId:parseInt(cid), diasReales:fechas.size
+    }));
+    const totalReal=entradas.reduce((s,e)=>s+e.diasReales,0);
+    if(totalReal===0) return;
+
+    // Proporción exacta y piso
+    const calc=entradas.map(e=>({
+      ...e,
+      exacto:(e.diasReales/totalReal)*TOTAL,
+      dias:0
+    }));
+    calc.forEach(e=>e.dias=Math.floor(e.exacto));
+
+    // Días sobrantes → al de más días reales (luego mayor residuo)
+    let sobrante=TOTAL-calc.reduce((s,e)=>s+e.dias,0);
+    const orden=[...calc].sort((a,b)=>b.diasReales-a.diasReales||(b.exacto%1)-(a.exacto%1));
+    for(let i=0;i<sobrante&&i<orden.length;i++) orden[i].dias+=1;
+
+    // Garantizar máximo 30 días total
+    let total=calc.reduce((s,e)=>s+e.dias,0);
+    if(total>TOTAL){
+      const exceso=total-TOTAL;
+      const asc=[...calc].sort((a,b)=>a.diasReales-b.diasReales);
+      for(let i=0;i<exceso;i++) asc[i%asc.length].dias=Math.max(0,asc[i%asc.length].dias-1);
+    }
+
+    calc.forEach(e=>{
+      const centro=centrosTodos.find(c=>c.id===e.centroId);
+      rows.push({
+        Colaborador:colab?.nombre||'(eliminado)',
+        Documento:colab?.documento||'',
+        'Código CC':centro?.codigo||e.centroId,
+        'Centro de Costo':centro?.nombre||'(eliminado)',
+        'Días reales':e.diasReales,
+        'Días a liquidar':e.dias
+      });
     });
   });
+
   rows.sort((a,b)=>a.Colaborador.localeCompare(b.Colaborador)||String(a['Código CC']).localeCompare(String(b['Código CC']),undefined,{numeric:true}));
 
   const ws=XLSX.utils.json_to_sheet([]);
-  XLSX.utils.sheet_add_aoa(ws,[[`Reporte Mensual — ${MONTHS[mes]} ${anio}`]],{origin:'A1'});
+  XLSX.utils.sheet_add_aoa(ws,[[`Reporte Mensual — ${MONTHS[mes]} ${anio} (base 30 días)`]],{origin:'A1'});
   XLSX.utils.sheet_add_json(ws,rows,{origin:'A2',skipHeader:false});
-  ws['!cols']=[{wch:28},{wch:14},{wch:10},{wch:38},{wch:14}];
+  ws['!cols']=[{wch:28},{wch:14},{wch:10},{wch:38},{wch:12},{wch:14}];
 
   const wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,`${MONTHS[mes]} ${anio}`);
