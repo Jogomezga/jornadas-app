@@ -288,9 +288,22 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Nuevo colaborador</div>
-    <div class="modal-sub">Ingresa el nombre completo</div>
+    <div class="modal-sub">Ingresa los datos del colaborador</div>
     <div class="form-group"><label class="form-label">Nombre completo</label><input class="form-input" id="input-colab-nombre" placeholder="Ej: Juan Pérez Gómez" type="text"></div>
     <div class="form-group"><label class="form-label">Número de documento</label><input class="form-input" id="input-colab-documento" placeholder="Ej: 71.234.567-8" type="text"></div>
+    <div class="form-group"><label class="form-label">Cargo</label>
+      <select class="form-input" id="input-colab-cargo">
+        <option value="">— Seleccionar cargo —</option>
+        <option>SUPERVISOR ELECTRICISTA 1</option>
+        <option>ENCARGADO ELECTRICISTA 1</option>
+        <option>AUXILIAR ELECTRICISTA 1</option>
+        <option>AUXILIAR ELECTRICISTA 2</option>
+        <option>OFICIAL ELECTRICISTA 1</option>
+        <option>OFICIAL ELECTRICISTA 2</option>
+        <option>OFICIAL ELECTRICISTA 3</option>
+        <option>OFICIAL DE REDES Y LINIERO</option>
+      </select>
+    </div>
     <button class="btn btn-primary" onclick="guardarColaborador()">✓ Guardar colaborador</button>
   </div>
 </div>
@@ -410,7 +423,7 @@ async function init(){
   updateDateLabels();
   try{
     const[{data:c,error:e1},{data:cc,error:e2},{data:t,error:e3}]=await Promise.all([
-      sb.from('colaboradores').select('id,nombre,activo,documento').order('nombre'),
+      sb.from('colaboradores').select('id,nombre,activo,documento,cargo').order('nombre'),
       sb.from('centros_costo').select('id,codigo,nombre,activo').order('codigo'),
       sb.from('turnos').select('*').eq('activo',true).order('id')
     ]);
@@ -731,11 +744,11 @@ function renderEquipo(){
   const q=(document.getElementById('equipo-search').value||'').toLowerCase();
   const lista=colaboradoresTodos.filter(c=>{const mq=c.nombre.toLowerCase().includes(q)||(c.documento||'').toLowerCase().includes(q);const mf=colabFilter==='todos'||(colabFilter==='activos'&&c.activo)||(colabFilter==='inactivos'&&!c.activo);return mq&&mf;});
   if(!lista.length){document.getElementById('equipo-list').innerHTML='<div class="empty">No hay colaboradores que coincidan</div>';return;}
-  document.getElementById('equipo-list').innerHTML=lista.map((c,i)=>{const av=c.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();return`<div class="proj-card ${c.activo?'':'inactive'}"><div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0"><div class="avatar ${AVC[i%6]}" style="flex-shrink:0">${av}</div><div class="proj-info" style="margin-right:0"><div class="proj-name" style="margin-top:0">${c.nombre}</div><div class="card-doc">CC ${c.documento||'—'}</div></div></div><div class="proj-actions">${c.activo?'':'<button class="icon-btn danger" onclick="eliminarColaborador('+c.id+')">🗑️</button>'}<button class="proj-toggle ${c.activo?'on':''}" onclick="toggleColaborador(${c.id},${c.activo})"></button></div></div>`;}).join('');
+  document.getElementById('equipo-list').innerHTML=lista.map((c,i)=>{const av=c.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();return`<div class="proj-card ${c.activo?'':'inactive'}"><div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0"><div class="avatar ${AVC[i%6]}" style="flex-shrink:0">${av}</div><div class="proj-info" style="margin-right:0"><div class="proj-name" style="margin-top:0">${c.nombre}</div><div class="card-doc">CC ${c.documento||'—'}</div>${c.cargo?`<div class="card-doc" style="color:#4338CA">${c.cargo}</div>`:''}</div></div><div class="proj-actions">${c.activo?'':'<button class="icon-btn danger" onclick="eliminarColaborador('+c.id+')">🗑️</button>'}<button class="proj-toggle ${c.activo?'on':''}" onclick="toggleColaborador(${c.id},${c.activo})"></button></div></div>`;}).join('');
 }
-function openNuevoColaborador(){document.getElementById('input-colab-nombre').value='';document.getElementById('input-colab-documento').value='';document.getElementById('modal-colaborador').classList.add('open');setTimeout(()=>document.getElementById('input-colab-nombre').focus(),300);}
+function openNuevoColaborador(){document.getElementById('input-colab-nombre').value='';document.getElementById('input-colab-documento').value='';document.getElementById('input-colab-cargo').value='';document.getElementById('modal-colaborador').classList.add('open');setTimeout(()=>document.getElementById('input-colab-nombre').focus(),300);}
 function closeColaboradorOutside(e){if(e.target===document.getElementById('modal-colaborador'))document.getElementById('modal-colaborador').classList.remove('open');}
-async function guardarColaborador(){const nombre=document.getElementById('input-colab-nombre').value.trim();const documento=document.getElementById('input-colab-documento').value.trim();if(!nombre){showToast('Ingresa el nombre del colaborador');return;}const{data,error}=await sb.from('colaboradores').insert({nombre,documento:documento||null,activo:true}).select().single();if(error){showToast('Error: '+error.message);return;}colaboradoresTodos.push(data);colaboradoresTodos.sort((a,b)=>a.nombre.localeCompare(b.nombre));colaboradores=colaboradoresTodos.filter(x=>x.activo);document.getElementById('modal-colaborador').classList.remove('open');renderEquipo();showToast('✓ '+nombre.split(' ')[0]+' agregado al equipo');}
+async function guardarColaborador(){const nombre=document.getElementById('input-colab-nombre').value.trim();const documento=document.getElementById('input-colab-documento').value.trim();const cargo=document.getElementById('input-colab-cargo').value;if(!nombre){showToast('Ingresa el nombre del colaborador');return;}if(!cargo){showToast('Selecciona el cargo del colaborador');return;}const{data,error}=await sb.from('colaboradores').insert({nombre,documento:documento||null,cargo,activo:true}).select().single();if(error){showToast('Error: '+error.message);return;}colaboradoresTodos.push(data);colaboradoresTodos.sort((a,b)=>a.nombre.localeCompare(b.nombre));colaboradores=colaboradoresTodos.filter(x=>x.activo);document.getElementById('modal-colaborador').classList.remove('open');renderEquipo();showToast('✓ '+nombre.split(' ')[0]+' agregado al equipo');}
 async function toggleColaborador(id,activo){const{error}=await sb.from('colaboradores').update({activo:!activo}).eq('id',id);if(error){showToast('Error: '+error.message);return;}const idx=colaboradoresTodos.findIndex(c=>c.id===id);if(idx>=0)colaboradoresTodos[idx].activo=!activo;colaboradores=colaboradoresTodos.filter(x=>x.activo);renderEquipo();showToast(activo?'Colaborador desactivado (se conserva su historial)':'Colaborador reactivado');}
 async function eliminarColaborador(id){const c=colaboradoresTodos.find(x=>x.id===id);if(!c)return;if(!confirm('¿Eliminar definitivamente a '+c.nombre+'?'))return;const{error}=await sb.from('colaboradores').delete().eq('id',id);if(error){showToast(error.code==='23503'?'No se puede eliminar: tiene programación asociada. Déjalo deshabilitado.':'Error: '+error.message);return;}colaboradoresTodos=colaboradoresTodos.filter(x=>x.id!==id);colaboradores=colaboradoresTodos.filter(x=>x.activo);renderEquipo();showToast('✓ '+c.nombre+' eliminado');}
 
